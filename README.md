@@ -21,7 +21,7 @@ Add `positions` as a dependency of your project.
 
 ```toml
 [dependencies]
-positions = "0.1.0"
+positions = "0.1.1"
 
 # `rust_decimal` is added to make the example code work,
 # but optional for using `positions`.
