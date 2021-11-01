@@ -2,6 +2,19 @@
 
 A position (finance) definition with some good algebraic properties.
 
+[![Crates.io][crates-badge]][crates-url]
+[![MIT licensed][mit-badge]][mit-url]
+[![Build Status][actions-badge]][actions-url]
+
+[crates-badge]: https://img.shields.io/crates/v/positions.svg
+[crates-url]: https://crates.io/crates/positions
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[mit-url]: https://github.com/Nouzan/positions/blob/master/LICENSE
+[actions-badge]: https://github.com/Nouzan/positions/workflows/CI/badge.svg
+[actions-url]: https://github.com/Nouzan/positions/actions?query=workflow%3ACI+branch%3Amain
+
+[API Docs](https://docs.rs/positions/latest/positions)
+
 ## Example
 
 Add `positions` as a dependency of your project.
