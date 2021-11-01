@@ -20,7 +20,7 @@ pub use naive_position::{IntoNaivePosition, NaivePosition, ToNaivePosition};
 pub use position::{normal, position, reversed, Position};
 pub use representation::{Normal, Representation, Reversed};
 
-/// Num traits that is required by position.
+/// Num trait that is required by position.
 pub trait PositionNum: Num + Signed + Clone + PartialOrd {}
 
 impl<T: Num + Signed + Clone + PartialOrd> PositionNum for T {}

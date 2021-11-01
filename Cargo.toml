@@ -1,11 +1,11 @@
 [package]
 name = "positions"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A position (finance) definition with some good algebraic properties."
 repository = "https://github.com/Nouzan/positions/"
 license = "MIT"
-keywords = ["finance", "position"]
+keywords = ["finance"]
 
 [dependencies]
 num-traits = "0.2.14"

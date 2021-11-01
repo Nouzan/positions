@@ -75,7 +75,7 @@ impl<Rep: Representation, T: PositionNum> Position<Rep, T> {
         Self::new(price, size, value)
     }
 
-    /// Return a new position that consumes its value. (Equivalence I).
+    /// Return a new position that consumes its `value`. (Equivalence I).
     ///
     /// Return `None` if `size` is zero.
     pub fn consumed(&self) -> Option<Self> {
@@ -207,7 +207,7 @@ pub fn normal<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<Nor
     Position::from_naive(naive).unwrap()
 }
 
-/// Create a normal representation position from naive.
+/// Create a reversed representation position from naive.
 ///
 /// # Panics
 /// Panic if naive `price` is zero.
@@ -228,7 +228,7 @@ pub fn reversed<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<R
     Position::from_naive(naive).expect("`price` cannot be zero in reversed representation.")
 }
 
-/// Create a normal representation position from naive.
+/// Create position with the given representation from naive.
 ///
 /// # Panics
 /// Panic if naive `price` is zero.

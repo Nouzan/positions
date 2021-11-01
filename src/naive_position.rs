@@ -2,7 +2,7 @@ use super::PositionNum;
 use num_traits::Zero;
 use std::ops::{Add, Neg, Sub};
 
-/// Naive holding (in normal representation).
+/// Naive position (in normal representation).
 #[derive(Debug, Clone, Copy)]
 pub struct NaivePosition<T: PositionNum> {
     /// Price.
@@ -24,12 +24,12 @@ impl<T: PositionNum> Default for NaivePosition<T> {
 }
 
 impl<T: PositionNum> NaivePosition<T> {
-    /// Create a new `NaivePosition`.
+    /// Create a new [`NaivePosition`].
     pub fn new(price: T, size: T, value: T) -> Self {
         Self { price, size, value }
     }
 
-    /// Return a new position that consumes its value. (Equivalence I).
+    /// Return a new position that consumes its `value`. (Equivalence I).
     ///
     /// Return `None` if `size` is zero.
     pub fn consumed(&self) -> Option<Self> {
@@ -66,7 +66,7 @@ impl<T: PositionNum> NaivePosition<T> {
         }
     }
 
-    /// Convert the price to the given
+    /// Convert the `price` to the given
     /// but keep equivalent to the original.
     /// (Equivalence II)
     pub fn convert(&mut self, price: T) {
