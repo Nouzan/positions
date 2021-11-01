@@ -16,7 +16,7 @@ rust_decimal = "1.17.0"
 rust_decimal_macros = "1.17.0"
 ```
 
-And then, you can try this codes.
+And then, you can try these codes.
 
 ```rust
 use positions::normal;
