@@ -1,0 +1,11 @@
+[package]
+name = "positions"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num-traits = "0.2.14"
+
+[dev-dependencies]
+rust_decimal = "1.17.0"
+rust_decimal_macros = "1.17.0"
