@@ -51,10 +51,3 @@ fn serde_normal() {
     let h: Position<Normal, _> = serde_json::from_value(value).unwrap();
     assert_eq!(h, Position::with_naive((dec!(1.0), dec!(2.0))));
 }
-
-#[test]
-fn serde_default() {
-    let value = serde_json::json!({});
-    let h: Position<Normal, _> = serde_json::from_value(value).unwrap();
-    assert_eq!(h, Position::with_naive((dec!(1.0), dec!(0.0))));
-}
