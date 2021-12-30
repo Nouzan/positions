@@ -1,9 +1,10 @@
 use super::PositionNum;
 use num_traits::Zero;
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, Neg, Sub};
 
 /// Naive position (in normal representation).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct NaivePosition<T: PositionNum> {
     /// Price.
     pub price: T,

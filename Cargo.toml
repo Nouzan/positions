@@ -1,6 +1,6 @@
 [package]
 name = "positions"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "A position (finance) definition with some good algebraic properties."
 repository = "https://github.com/Nouzan/positions/"
@@ -9,7 +9,9 @@ keywords = ["finance"]
 
 [dependencies]
 num-traits = "0.2.14"
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 rust_decimal = "1.17.0"
 rust_decimal_macros = "1.17.0"
+serde_json = "1"

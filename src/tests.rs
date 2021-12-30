@@ -25,3 +25,36 @@ fn close_position_normal() {
 
     assert_eq!(h1 + h2 + h3, normal((dec!(1.6), dec!(1.0), dec!(-0.4))));
 }
+
+#[test]
+fn serde_reversed() {
+    let value = serde_json::json!({
+        "naive": {
+            "price": 1.0,
+            "size": 2.0,
+            "value": 0.0,
+        }
+    });
+    let h: Position<Reversed, _> = serde_json::from_value(value).unwrap();
+    assert_eq!(h, Position::with_naive((dec!(1.0), dec!(2.0))));
+}
+
+#[test]
+fn serde_normal() {
+    let value = serde_json::json!({
+        "naive": {
+            "price": 1.0,
+            "size": 2.0,
+            "value": 0.0,
+        }
+    });
+    let h: Position<Normal, _> = serde_json::from_value(value).unwrap();
+    assert_eq!(h, Position::with_naive((dec!(1.0), dec!(2.0))));
+}
+
+#[test]
+fn serde_default() {
+    let value = serde_json::json!({});
+    let h: Position<Normal, _> = serde_json::from_value(value).unwrap();
+    assert_eq!(h, Position::with_naive((dec!(1.0), dec!(0.0))));
+}

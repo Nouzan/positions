@@ -1,12 +1,15 @@
 use super::{IntoNaivePosition, NaivePosition, Normal, PositionNum, Representation, Reversed};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Add, Neg, Sub};
 
 /// Position.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Position<Rep: Representation, T: PositionNum> {
+    #[serde(default)]
     naive: NaivePosition<T>,
+    #[serde(skip)]
     _rep: PhantomData<Rep>,
 }
 
@@ -45,7 +48,7 @@ impl<Rep: Representation, T: PositionNum> Default for Position<Rep, T> {
 
 impl<Rep: Representation, T: PositionNum> Position<Rep, T> {
     /// Create a [`Position`] directly from [`IntoNaivePosition`].
-    fn with_naive<H: IntoNaivePosition<T>>(naive: H) -> Self {
+    pub(crate) fn with_naive<H: IntoNaivePosition<T>>(naive: H) -> Self {
         Self {
             naive: naive.into_naive_position(),
             _rep: PhantomData::default(),
