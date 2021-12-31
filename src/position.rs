@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use std::ops::{Add, Neg, Sub};
 
 /// Position.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Position<Rep: Representation, T: PositionNum> {
     pub(crate) naive: NaivePosition<T>,
     #[serde(skip)]
@@ -22,6 +22,19 @@ impl<Rep: Representation, T: PositionNum + fmt::Display> fmt::Display for Positi
         let size = self.size();
         let value = self.value();
         write!(f, "{}({}, {}) + {}", mark, price, size, value)
+    }
+}
+
+impl<Rep: Representation, T: PositionNum + fmt::Debug> fmt::Debug for Position<Rep, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mark = if Rep::is_reversed() { "R" } else { "N" };
+        let price = self
+            .price()
+            .map(|p| format!("{:?}", p))
+            .unwrap_or("NaN".to_string());
+        let size = self.size();
+        let value = self.value();
+        write!(f, "{}({}, {:?}) + {:?}", mark, price, size, value)
     }
 }
 
