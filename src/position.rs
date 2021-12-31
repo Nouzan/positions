@@ -7,9 +7,9 @@ use std::ops::{Add, Neg, Sub};
 /// Position.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Position<Rep: Representation, T: PositionNum> {
-    naive: NaivePosition<T>,
+    pub(crate) naive: NaivePosition<T>,
     #[serde(skip)]
-    _rep: PhantomData<Rep>,
+    pub(crate) _rep: PhantomData<Rep>,
 }
 
 impl<Rep: Representation, T: PositionNum + fmt::Display> fmt::Display for Position<Rep, T> {
