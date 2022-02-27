@@ -1,5 +1,5 @@
 /// Price representation.
-pub trait Representation {
+pub trait Representation: 'static + Send + Sync + Clone + Copy + std::fmt::Debug {
     /// Is price representation reversed.
     fn is_reversed() -> bool;
 }
