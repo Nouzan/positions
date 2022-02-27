@@ -5,11 +5,11 @@ pub trait Representation: 'static + Send + Sync + Clone + Copy + std::fmt::Debug
 }
 
 /// Normal price representation.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Normal;
 
 /// Reversed price representation.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Reversed;
 
 impl Representation for Normal {
