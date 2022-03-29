@@ -1,6 +1,6 @@
 [package]
 name = "positions"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "A position (finance) definition with some good algebraic properties."
 repository = "https://github.com/Nouzan/positions/"

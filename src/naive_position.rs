@@ -7,7 +7,7 @@ use std::ops::{Add, Neg, Sub};
 
 /// Naive position (in normal representation).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct NaivePosition<T: PositionNum> {
+pub struct NaivePosition<T> {
     /// Price.
     pub price: T,
     /// Size.

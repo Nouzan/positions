@@ -6,7 +6,7 @@ use std::ops::{Add, Neg, Sub};
 
 /// Position.
 #[derive(Serialize, Deserialize)]
-pub struct Position<Rep: Representation, T: PositionNum> {
+pub struct Position<Rep, T> {
     pub(crate) naive: NaivePosition<T>,
     #[serde(skip)]
     pub(crate) _rep: PhantomData<Rep>,
