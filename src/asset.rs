@@ -1,9 +1,9 @@
-use core::str::FromStr;
+use core::{cmp::Ordering, str::FromStr};
 
 use alloc::{borrow::Cow, fmt, string::String};
 
 /// Asset.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Asset {
     /// USD.
     Usd,
@@ -52,5 +52,17 @@ impl FromStr for Asset {
             "ETH" | "eth" | "Eth" => Ok(Self::Eth),
             s => Ok(Self::Extesntion(Cow::Owned(s.to_uppercase()))),
         }
+    }
+}
+
+impl PartialOrd for Asset {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.as_str().partial_cmp(other.as_str())
+    }
+}
+
+impl Ord for Asset {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_str().cmp(other.as_str())
     }
 }
