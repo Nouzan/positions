@@ -101,7 +101,7 @@ impl<T> AddAssign for PositionTree<T>
 where
     T: PositionNum,
 {
-    fn add_assign(&mut self, rhs: Self) {
+    fn add_assign(&mut self, mut rhs: Self) {
         if self.asset == rhs.asset {
             let Self {
                 value,
@@ -120,10 +120,16 @@ where
                 debug_assert_ne!(asset, self.asset);
                 *self += tree;
             }
-        } else if let Some(lhs) = self.children.get_mut(&rhs.asset) {
-            *lhs += rhs;
         } else {
-            self.children.insert(rhs.asset.clone(), rhs);
+            let children = core::mem::take(&mut rhs.children);
+            if let Some(lhs) = self.children.get_mut(&rhs.asset) {
+                *lhs += rhs;
+            } else {
+                self.children.insert(rhs.asset.clone(), rhs);
+            }
+            for (_asset, tree) in children {
+                *self += tree;
+            }
         }
     }
 }
@@ -182,7 +188,7 @@ mod tests {
         q += (dec!(2), &btc);
         q += (dec!(1) / dec!(16000), dec!(-200), &usdt);
         println!("{q}");
-        q += p;
-        println!("{q}");
+        p += q;
+        println!("{p}");
     }
 }
