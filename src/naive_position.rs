@@ -104,7 +104,7 @@ where
             } else if self.size.is_zero() && other.size.is_zero() {
                 self.value.eq(&other.value)
             } else {
-                match (self.clone().consumed(), other.clone().consumed()) {
+                match (self.clone().consumed(), other.consumed()) {
                     (Some(lhs), Some(rhs)) => lhs.price.eq(&rhs.price),
                     _ => false,
                 }

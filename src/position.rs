@@ -20,7 +20,7 @@ impl<Rep: Representation, T: PositionNum + fmt::Display> fmt::Display for Positi
         let price = self
             .price()
             .map(|p| p.to_string())
-            .unwrap_or("NaN".to_string());
+            .unwrap_or_else(|| "NaN".to_string());
         let size = self.size();
         let value = self.value();
         write!(f, "{}({}, {}) + {}", mark, price, size, value)
@@ -33,7 +33,7 @@ impl<Rep: Representation, T: PositionNum + fmt::Debug> fmt::Debug for Position<R
         let price = self
             .price()
             .map(|p| format!("{:?}", p))
-            .unwrap_or("NaN".to_string());
+            .unwrap_or_else(|| "NaN".to_string());
         let size = self.size();
         let value = self.value();
         write!(f, "{}({}, {:?}) + {:?}", mark, price, size, value)
