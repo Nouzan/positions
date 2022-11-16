@@ -1,14 +1,16 @@
 use super::{IntoNaivePosition, NaivePosition, Normal, PositionNum, Representation, Reversed};
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Add, Neg, Sub};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Position.
-#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Position<Rep, T> {
     pub(crate) naive: NaivePosition<T>,
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) _rep: PhantomData<Rep>,
 }
 

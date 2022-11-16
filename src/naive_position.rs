@@ -2,11 +2,14 @@ use crate::{Position, Representation};
 
 use super::PositionNum;
 use num_traits::Zero;
-use serde::{Deserialize, Serialize};
 use std::ops::{Add, Neg, Sub};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Naive position (in normal representation).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NaivePosition<T> {
     /// Price.
     pub price: T,
