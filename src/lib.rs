@@ -23,7 +23,7 @@ pub mod naive_position;
 pub mod asset;
 
 /// Position Tree.
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
 pub mod tree;
 
 /// Price representation.
