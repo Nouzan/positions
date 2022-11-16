@@ -1,7 +1,7 @@
 use super::{IntoNaivePosition, NaivePosition, Normal, PositionNum, Representation, Reversed};
-use std::fmt;
-use std::marker::PhantomData;
-use std::ops::{Add, Neg, Sub};
+use core::fmt;
+use core::marker::PhantomData;
+use core::ops::{Add, Neg, Sub};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -17,26 +17,30 @@ pub struct Position<Rep, T> {
 impl<Rep: Representation, T: PositionNum + fmt::Display> fmt::Display for Position<Rep, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mark = if Rep::is_reversed() { "R" } else { "N" };
-        let price = self
-            .price()
-            .map(|p| p.to_string())
-            .unwrap_or_else(|| "NaN".to_string());
+        write!(f, "{mark}")?;
+        if let Some(price) = self.price() {
+            write!(f, "({price}, ")?;
+        } else {
+            write!(f, "(Nan, ")?;
+        }
         let size = self.size();
         let value = self.value();
-        write!(f, "{}({}, {}) + {}", mark, price, size, value)
+        write!(f, "{}) + {}", size, value)
     }
 }
 
 impl<Rep: Representation, T: PositionNum + fmt::Debug> fmt::Debug for Position<Rep, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mark = if Rep::is_reversed() { "R" } else { "N" };
-        let price = self
-            .price()
-            .map(|p| format!("{:?}", p))
-            .unwrap_or_else(|| "NaN".to_string());
+        write!(f, "{mark}")?;
+        if let Some(price) = self.price() {
+            write!(f, "({price:?}, ")?;
+        } else {
+            write!(f, "(Nan, ")?;
+        }
         let size = self.size();
         let value = self.value();
-        write!(f, "{}({}, {:?}) + {:?}", mark, price, size, value)
+        write!(f, "{:?}) + {:?}", size, value)
     }
 }
 

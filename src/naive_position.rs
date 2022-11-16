@@ -1,8 +1,8 @@
 use crate::{Position, Representation};
 
 use super::PositionNum;
+use core::ops::{Add, Neg, Sub};
 use num_traits::Zero;
-use std::ops::{Add, Neg, Sub};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -87,7 +87,7 @@ impl<T: PositionNum> NaivePosition<T> {
     /// equivalent to the original.
     pub fn take(&mut self) -> T {
         let mut value = T::zero();
-        std::mem::swap(&mut self.value, &mut value);
+        core::mem::swap(&mut self.value, &mut value);
         value
     }
 }
@@ -249,7 +249,7 @@ impl<T: PositionNum> NaivePosition<T> {
     pub fn into_position<Rep: Representation>(self) -> Position<Rep, T> {
         Position {
             naive: self,
-            _rep: std::marker::PhantomData::default(),
+            _rep: core::marker::PhantomData::default(),
         }
     }
 }

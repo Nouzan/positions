@@ -1,6 +1,16 @@
 //! A position (finance) definition that has some good algebraic properties.
 
 #![deny(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+use num_traits::{Num, Signed};
+
+pub use naive_position::{IntoNaivePosition, NaivePosition, ToNaivePosition};
+pub use position::{normal, position, reversed, Position};
+pub use representation::{Normal, Representation, Reversed};
 
 #[cfg(test)]
 mod tests;
@@ -8,17 +18,19 @@ mod tests;
 /// Naive position without price representation.
 pub mod naive_position;
 
+/// Asset.
+#[cfg(feature = "alloc")]
+pub mod asset;
+
+/// Position Tree.
+#[cfg(feature = "alloc")]
+pub mod tree;
+
 /// Price representation.
 pub mod representation;
 
 /// Position with price representation.
 pub mod position;
-
-use num_traits::{Num, Signed};
-
-pub use naive_position::{IntoNaivePosition, NaivePosition, ToNaivePosition};
-pub use position::{normal, position, reversed, Position};
-pub use representation::{Normal, Representation, Reversed};
 
 /// Num trait that is required by position.
 pub trait PositionNum: Num + Signed + Clone + PartialOrd {}
