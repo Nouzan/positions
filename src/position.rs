@@ -1,4 +1,5 @@
-use super::{IntoNaivePosition, NaivePosition, Normal, PositionNum, Representation, Reversed};
+use super::representation::{Normal, Representation, Reversed};
+use super::{IntoNaivePosition, NaivePosition, PositionNum};
 use core::fmt;
 use core::marker::PhantomData;
 use core::ops::{Add, Neg, Sub};
@@ -214,7 +215,7 @@ impl<Rep: Representation, T: PositionNum> Sub for Position<Rep, T> {
 ///
 /// # Example
 /// ```
-/// use positions::normal;
+/// use positions::position::normal;
 ///
 /// let h = normal((1, 2, 3));
 /// assert_eq!(h.price().unwrap(), 1);
@@ -235,7 +236,7 @@ pub fn normal<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<Nor
 ///
 /// # Example
 /// ```
-/// use positions::reversed;
+/// use positions::position::reversed;
 ///
 /// let h = reversed((2.0, 2.0, 3.0));
 /// assert_eq!(h.price().unwrap(), 2.0);
@@ -256,7 +257,7 @@ pub fn reversed<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<R
 ///
 /// # Example
 /// ```
-/// use positions::{position, Reversed};
+/// use positions::{position::position, representation::Reversed};
 ///
 /// let h = position::<Reversed, _, _>((2.0, 2.0, 3.0));
 /// assert_eq!(h.price().unwrap(), 2.0);

@@ -8,9 +8,7 @@ extern crate alloc;
 
 use num_traits::{Num, Signed};
 
-pub use naive_position::{IntoNaivePosition, NaivePosition, ToNaivePosition};
-pub use position::{normal, position, reversed, Position};
-pub use representation::{Normal, Representation, Reversed};
+pub use naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosition};
 
 #[cfg(test)]
 mod tests;

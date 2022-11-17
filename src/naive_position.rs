@@ -1,4 +1,4 @@
-use crate::{Position, Representation};
+use crate::{position::Position, representation::Representation};
 
 use super::PositionNum;
 use core::ops::{Add, Neg, Sub};
@@ -169,6 +169,31 @@ impl<T: PositionNum> IntoNaivePosition<T> for T {
     }
 }
 
+/// Position in reversed form.
+#[derive(Debug, Clone, Copy)]
+pub struct Reversed<P>(pub P);
+
+impl<T, P> IntoNaivePosition<T> for Reversed<P>
+where
+    T: PositionNum,
+    P: IntoNaivePosition<T>,
+{
+    /// Convert into a naive position in reversed form.
+    /// # Panic
+    /// Panic if the `price` is zero.
+    fn into_naive_position(self) -> NaivePosition<T> {
+        let NaivePosition { price, size, value } = self.0.into_naive_position();
+        if price.is_zero() {
+            panic!("zero price cannot be convert into reversed form");
+        }
+        NaivePosition {
+            price: T::one() / price,
+            size: -size,
+            value,
+        }
+    }
+}
+
 /// Types that can convert to [`NaivePosition`] by ref.
 pub trait ToNaivePosition<T: PositionNum> {
     /// Convert to a `NaivePosition`.
@@ -256,7 +281,7 @@ impl<T: PositionNum> NaivePosition<T> {
 
 #[cfg(test)]
 mod test {
-    use crate::{Normal, Reversed};
+    use crate::representation::{Normal, Reversed};
 
     use super::*;
 
