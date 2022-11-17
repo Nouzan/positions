@@ -101,6 +101,20 @@ impl<'a, T: PositionNum> PositionTree<'a, T> {
     }
 }
 
+impl<'a, T> Deref for PositionTree<'a, T> {
+    type Target = WeakTree<'a, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.weak
+    }
+}
+
+impl<'a, T> DerefMut for PositionTree<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.weak
+    }
+}
+
 impl<'a, T> AddAssign<(T, &'a Asset)> for PositionTree<'a, T>
 where
     T: PositionNum,
@@ -119,26 +133,12 @@ where
     }
 }
 
-impl<'a, T> AddAssign<(T, T, &'a Asset)> for PositionTree<'a, T>
+impl<'a, T> AddAssign<T> for WeakTree<'a, T>
 where
     T: PositionNum,
 {
-    fn add_assign(&mut self, (price, size, asset): (T, T, &'a Asset)) {
-        self.weak += (price, size, asset);
-    }
-}
-
-impl<'a, T> Deref for PositionTree<'a, T> {
-    type Target = WeakTree<'a, T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.weak
-    }
-}
-
-impl<'a, T> DerefMut for PositionTree<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.weak
+    fn add_assign(&mut self, value: T) {
+        self.value.0 = self.value.0.clone() + value;
     }
 }
 
@@ -242,15 +242,19 @@ mod tests {
         let btcusdt_swap = Asset::from_str("btc-usdt-swap").unwrap();
         let mut p = tree(&usdt);
         p += (dec!(2), &btc);
-        p += (dec!(16000), dec!(12), &btcusdt_swap);
+        *p += (dec!(16000), dec!(12), &btcusdt_swap);
         p += (dec!(-1), &usdt);
-        p += (dec!(14000), dec!(-2), &btcusdt_swap);
+        *p += (dec!(14000), dec!(-2), &btcusdt_swap);
         println!("{p}");
         let mut q = tree(&btc);
         q += (dec!(2), &btc);
-        q += (dec!(1) / dec!(16000), dec!(-200), &usdt);
+        *q += (dec!(1) / dec!(16000), dec!(-200), &usdt);
         println!("{q}");
         p += q;
+        println!("{p}");
+        *p.get_weak_mut(&btc).unwrap() += (dec!(0), dec!(1), &btc);
+        println!("{p}");
+        *p.get_weak_mut(&btc).unwrap() += dec!(-1);
         println!("{p}");
     }
 }
