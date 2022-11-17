@@ -237,8 +237,8 @@ mod tests {
 
     #[test]
     fn basic() {
-        let usdt = Asset::Usdt;
-        let btc = Asset::Btc;
+        let usdt = Asset::usdt();
+        let btc = Asset::btc();
         let btcusdt_swap = Asset::from_str("btc-usdt-swap").unwrap();
         let mut p = tree(&usdt);
         p += (dec!(2), &btc);
