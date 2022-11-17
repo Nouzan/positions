@@ -1,4 +1,5 @@
-use super::*;
+use super::position::{normal, reversed, Position};
+use super::representation::{Normal, Reversed};
 use rust_decimal_macros::dec;
 
 #[test]

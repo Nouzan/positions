@@ -1,7 +1,7 @@
 use alloc::fmt;
 
 pub use self::node::{Node, PositionNode, ValueNode};
-use crate::{asset::Asset, IntoNaivePosition, PositionNum};
+use crate::{asset::Asset, IntoNaivePosition, PositionNum, Reversed};
 use core::ops::{AddAssign, Deref, DerefMut};
 use std::collections::HashMap;
 
@@ -133,6 +133,15 @@ where
     }
 }
 
+impl<'a, T> AddAssign<Reversed<(T, T, &'a Asset)>> for WeakTree<'a, T>
+where
+    T: PositionNum,
+{
+    fn add_assign(&mut self, Reversed((price, size, asset)): Reversed<(T, T, &'a Asset)>) {
+        self.insert_position(Reversed((price, size)), asset);
+    }
+}
+
 impl<'a, T> AddAssign<T> for WeakTree<'a, T>
 where
     T: PositionNum,
@@ -185,6 +194,26 @@ where
     }
 }
 
+fn write_position<T>(f: &mut fmt::Formatter<'_>, price: &T, size: &T, asset: &Asset) -> fmt::Result
+where
+    T: fmt::Display + PositionNum,
+{
+    if asset.is_prefer_reversed() {
+        if price.is_zero() {
+            write!(f, "(Nan, {} {asset})*", -size.clone())
+        } else {
+            write!(
+                f,
+                "({}, {} {asset})*",
+                T::one() / price.clone(),
+                -size.clone()
+            )
+        }
+    } else {
+        write!(f, "({price}, {size} {asset})")
+    }
+}
+
 impl<'a, T> fmt::Display for WeakTree<'a, T>
 where
     T: fmt::Display + PositionNum,
@@ -192,10 +221,9 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (idx, (asset, position)) in self.positions.iter().enumerate() {
             if idx != 0 {
-                write!(f, " + ({}, {} {asset})", position.price, position.size)?;
-            } else {
-                write!(f, "({}, {} {asset})", position.price, position.size)?;
+                write!(f, " + ")?;
             }
+            write_position(f, &position.price, &position.size, asset)?;
         }
         let flag = !self.positions.is_empty();
         if self.value.0.is_positive() && flag {
@@ -222,10 +250,23 @@ where
                 write!(f, "{tree}")?;
             }
         }
-        if !self.children.is_empty() {
-            write!(f, " + ")?
+        let flag = !self.children.is_empty();
+        for (idx, (asset, position)) in self.positions.iter().enumerate() {
+            if flag || idx != 0 {
+                write!(f, " + ")?;
+            }
+            write_position(f, &position.price, &position.size, asset)?;
         }
-        write!(f, "{}", self.weak)
+        let flag = flag || !self.positions.is_empty();
+        if self.value.0.is_positive() && flag {
+            write!(f, " + {} {}", self.value.0, self.asset)
+        } else if self.value.0.is_negative() && flag {
+            write!(f, " - {} {}", self.value.0.abs(), self.asset)
+        } else if self.value.0.is_negative() {
+            write!(f, "- {} {}", self.value.0.abs(), self.asset)
+        } else {
+            write!(f, "{} {}", self.value.0, self.asset)
+        }
     }
 }
 
@@ -255,6 +296,18 @@ mod tests {
         *p.get_weak_mut(&btc).unwrap() += (dec!(0), dec!(1), &btc);
         println!("{p}");
         *p.get_weak_mut(&btc).unwrap() += dec!(-1);
+        println!("{p}");
+    }
+
+    #[test]
+    fn reversed() {
+        let usdt = Asset::usdt();
+        let btc = Asset::btc();
+        let btc_usd_swap = Asset::from_str("usd").unwrap().prefer_reversed();
+        let mut p = tree(&usdt);
+        p += (dec!(-16000), &usdt);
+        p += (dec!(1), &btc);
+        *p.get_weak_mut(&btc).unwrap() += Reversed((dec!(16000), dec!(-16000), &btc_usd_swap));
         println!("{p}");
     }
 }
