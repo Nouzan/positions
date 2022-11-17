@@ -49,6 +49,11 @@ impl<'a, T: PositionNum> WeakTree<'a, T> {
         }
         self
     }
+
+    /// Get reference asset-pairs.
+    pub fn pairs(&self) -> impl Iterator<Item = (&Asset, &Asset)> {
+        self.positions.keys().map(|n| (*n, self.asset))
+    }
 }
 
 /// Position Tree (the stronge tree).
@@ -98,6 +103,17 @@ impl<'a, T: PositionNum> PositionTree<'a, T> {
         } else {
             self.children.get_mut(asset)
         }
+    }
+
+    /// Get all asset-pairs (including the pairs of subtrees).
+    pub fn all_pairs(&self) -> impl Iterator<Item = (&Asset, &Asset)> {
+        let positions = self
+            .children
+            .values()
+            .flat_map(|c| c.pairs())
+            .chain(self.pairs());
+        let values = self.children.keys().map(|asset| (*asset, self.asset));
+        positions.chain(values)
     }
 }
 
@@ -280,7 +296,11 @@ mod tests {
     fn basic() {
         let usdt = Asset::usdt();
         let btc = Asset::btc();
-        let btcusdt_swap = Asset::from_str("btc-usdt-swap").unwrap();
+        let btcusdt_swap = Asset::from_str("btc-usdt-swap").unwrap().value_contained();
+        let btcusd_swap = Asset::from_str("btc-usd-swap")
+            .unwrap()
+            .value_contained()
+            .prefer_reversed();
         let mut p = tree(&usdt);
         p += (dec!(2), &btc);
         *p += (dec!(16000), dec!(12), &btcusdt_swap);
@@ -289,7 +309,7 @@ mod tests {
         println!("{p}");
         let mut q = tree(&btc);
         q += (dec!(2), &btc);
-        *q += (dec!(1) / dec!(16000), dec!(-200), &usdt);
+        *q += (dec!(1) / dec!(16000), dec!(-200), &btcusd_swap);
         println!("{q}");
         p += q;
         println!("{p}");
@@ -297,17 +317,34 @@ mod tests {
         println!("{p}");
         *p.get_weak_mut(&btc).unwrap() += dec!(-1);
         println!("{p}");
+        for (a, b) in p.all_pairs() {
+            if a.is_value_contained() {
+                println!("{a}");
+            } else {
+                println!("{a}-{b}");
+            }
+        }
     }
 
     #[test]
     fn reversed() {
         let usdt = Asset::usdt();
         let btc = Asset::btc();
-        let btc_usd_swap = Asset::from_str("usd").unwrap().prefer_reversed();
+        let btc_usd_swap = Asset::from_str("BTC-USDT-SWAP")
+            .unwrap()
+            .prefer_reversed()
+            .value_contained();
         let mut p = tree(&usdt);
         p += (dec!(-16000), &usdt);
         p += (dec!(1), &btc);
         *p.get_weak_mut(&btc).unwrap() += Reversed((dec!(16000), dec!(-16000), &btc_usd_swap));
         println!("{p}");
+        for (a, b) in p.all_pairs() {
+            if a.is_value_contained() {
+                println!("{a}");
+            } else {
+                println!("{a}-{b}");
+            }
+        }
     }
 }
