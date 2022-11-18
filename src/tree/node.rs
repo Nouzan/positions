@@ -42,7 +42,7 @@ where
 {
     /// Add a position (using the exchange rule).
     pub fn add(&mut self, position: impl IntoNaivePosition<T>) -> T {
-        self.0 = self.0.clone() + position.into_naive_position();
+        self.0 += position.into_naive_position();
         self.0.take()
     }
 

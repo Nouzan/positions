@@ -217,7 +217,7 @@ impl<Rep: Representation, T: PositionNum> Sub for Position<Rep, T> {
 ///
 /// # Example
 /// ```
-/// use positions::position::normal;
+/// use positions::legacy::position::normal;
 ///
 /// let h = normal((1, 2, 3));
 /// assert_eq!(h.price().unwrap(), 1);
@@ -238,7 +238,7 @@ pub fn normal<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<Nor
 ///
 /// # Example
 /// ```
-/// use positions::position::reversed;
+/// use positions::legacy::position::reversed;
 ///
 /// let h = reversed((2.0, 2.0, 3.0));
 /// assert_eq!(h.price().unwrap(), 2.0);
@@ -259,7 +259,7 @@ pub fn reversed<T: PositionNum, H: IntoNaivePosition<T>>(naive: H) -> Position<R
 ///
 /// # Example
 /// ```
-/// use positions::{position::position, representation::Reversed};
+/// use positions::legacy::{position::position, representation::Reversed};
 ///
 /// let h = position::<Reversed, _, _>((2.0, 2.0, 3.0));
 /// assert_eq!(h.price().unwrap(), 2.0);

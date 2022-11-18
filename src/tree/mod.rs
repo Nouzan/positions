@@ -42,10 +42,9 @@ impl<'a, T: PositionNum> WeakTree<'a, T> {
         if *asset == *(self.asset) {
             let mut position = position.into_naive_position();
             position.convert(T::one());
-            self.value.0 = self.value.0.clone() + position.take();
+            self.value.0 += position.take();
         } else {
-            let value = self.positions.entry(asset).or_default().add(position);
-            self.value.0 = self.value.0.clone() + value;
+            self.value.0 += self.positions.entry(asset).or_default().add(position);
         }
         self
     }
@@ -61,7 +60,7 @@ impl<'a, T: PositionNum> WeakTree<'a, T> {
         let mut value = self.value.0.clone();
         for (asset, p) in self.positions.iter() {
             let price = prices.get(&(*asset, self.asset))?;
-            value = value.clone() + p.eval(price);
+            value += p.eval(price);
         }
         Some(value)
     }
@@ -96,13 +95,13 @@ impl<'a, T: PositionNum> PositionTree<'a, T> {
     /// Insert a value.
     pub fn insert_value(&mut self, value: T, asset: &'a Asset) -> &mut Self {
         if *asset == *(self.weak.asset) {
-            self.weak.value.0 = self.weak.value.0.clone() + value;
+            self.weak.value.0 += value;
         } else {
             let acc = self
                 .children
                 .entry(asset)
                 .or_insert_with(|| WeakTree::new(T::zero(), asset));
-            acc.value.0 = acc.value.0.clone() + value;
+            acc.value.0 += value;
         }
         self
     }
@@ -134,7 +133,7 @@ impl<'a, T: PositionNum> PositionTree<'a, T> {
         for (asset, weak) in self.children.iter() {
             let price = prices.get(&(*asset, self.weak.asset))?;
             let weak_value = weak.eval_weak(prices)?;
-            value = value.clone() + price.clone() * weak_value;
+            value += weak_value * price;
         }
         Some(value)
     }
@@ -186,7 +185,7 @@ where
     T: PositionNum,
 {
     fn add_assign(&mut self, value: T) {
-        self.value.0 = self.value.0.clone() + value;
+        self.value.0 += value;
     }
 }
 
@@ -199,14 +198,14 @@ where
             let WeakTree {
                 value, positions, ..
             } = rhs;
-            self.value.0 = self.value.0.clone() + value.0;
+            self.value.0 += value.0;
             for (asset, position) in positions {
                 // According to the invarience, `asset` must not equal to `self.asset`.
                 debug_assert_ne!(*asset, *self.asset);
                 self.insert_position(position.0, asset);
             }
         } else if let Some(lhs) = self.children.get_mut(&rhs.asset) {
-            lhs.value.0 = lhs.value.0.clone() + rhs.value.0;
+            lhs.value.0 += rhs.value.0;
             for (asset, position) in rhs.positions {
                 // According to the invarience, `asset` must not equal to `self.asset`.
                 debug_assert_ne!(*asset, *lhs.asset);
@@ -241,12 +240,7 @@ where
         if price.is_zero() {
             write!(f, "(Nan, {} {asset})*", -size.clone())
         } else {
-            write!(
-                f,
-                "({}, {} {asset})*",
-                T::one() / price.clone(),
-                -size.clone()
-            )
+            write!(f, "({}, {} {asset})*", T::one() / price, -size.clone())
         }
     } else {
         write!(f, "({price}, {size} {asset})")

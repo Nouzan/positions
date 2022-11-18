@@ -1,5 +1,5 @@
 use super::PositionNum;
-use core::ops::{Add, Neg, Sub};
+use core::ops::{Add, AddAssign, Neg, Sub};
 use num_traits::Zero;
 
 #[cfg(feature = "serde")]
@@ -44,7 +44,7 @@ impl<T: PositionNum> NaivePosition<T> {
             None
         } else {
             Some(Self {
-                price: self.price.clone() - self.value.clone() / self.size.clone(),
+                price: (self.value.clone() / &self.size).neg() + &self.price,
                 size: self.size.clone(),
                 value: T::zero(),
             })
@@ -56,7 +56,7 @@ impl<T: PositionNum> NaivePosition<T> {
     /// No effect if `size` is zero.
     pub fn consume(&mut self) {
         if !self.size.is_zero() {
-            self.price = self.price.clone() - self.value.clone() / self.size.clone();
+            self.price -= self.value.clone() / &self.size;
             self.value = T::zero();
         }
     }
@@ -65,7 +65,7 @@ impl<T: PositionNum> NaivePosition<T> {
     /// but keep equivalent to the original position.
     /// (Equivalence II)
     pub fn converted(&self, price: T) -> Self {
-        let value = (price.clone() - self.price.clone()) * self.size.clone();
+        let value = (price.clone() - &self.price) * &self.size;
         Self {
             price,
             size: self.size.clone(),
@@ -77,7 +77,7 @@ impl<T: PositionNum> NaivePosition<T> {
     /// but keep equivalent to the original.
     /// (Equivalence II)
     pub fn convert(&mut self, price: T) {
-        let value = (price.clone() - self.price.clone()) * self.size.clone();
+        let value = (price.clone() - &self.price) * &self.size;
         self.price = price;
         self.value = value;
     }
@@ -207,41 +207,41 @@ impl<T: PositionNum, H: Clone + IntoNaivePosition<T>> ToNaivePosition<T> for H {
     }
 }
 
+impl<T: PositionNum, H> AddAssign<H> for NaivePosition<T>
+where
+    H: IntoNaivePosition<T>,
+{
+    fn add_assign(&mut self, rhs: H) {
+        let mut rhs = rhs.into_naive_position();
+        if self.size.abs() <= rhs.size.abs() {
+            std::mem::swap(self, &mut rhs);
+        }
+        if rhs.size.is_zero() {
+            self.value += rhs.value;
+        } else if (self.size.is_positive() && rhs.size.is_positive())
+            || (self.size.is_negative() && rhs.size.is_negative())
+        {
+            self.price = ((self.price.clone() * &self.size) + (rhs.price * &rhs.size))
+                / (self.size.clone() + &rhs.size);
+            self.size += rhs.size;
+            self.value += rhs.value;
+        } else {
+            self.size += &rhs.size;
+            self.value += rhs.value + (rhs.price - &self.price) * rhs.size.neg();
+        }
+    }
+}
+
 impl<T: PositionNum, H> Add<H> for NaivePosition<T>
 where
     H: IntoNaivePosition<T>,
 {
     type Output = Self;
 
-    fn add(self, rhs: H) -> Self::Output {
+    fn add(mut self, rhs: H) -> Self::Output {
         let rhs = rhs.into_naive_position();
-        let (lhs, rhs) = if self.size.abs() <= rhs.size.abs() {
-            (rhs, self)
-        } else {
-            (self, rhs)
-        };
-        if rhs.size.is_zero() {
-            Self {
-                price: lhs.price,
-                size: lhs.size,
-                value: lhs.value + rhs.value,
-            }
-        } else if (lhs.size.is_positive() && rhs.size.is_positive())
-            || (lhs.size.is_negative() && rhs.size.is_negative())
-        {
-            Self {
-                price: (lhs.price * lhs.size.clone() + rhs.price * rhs.size.clone())
-                    / (lhs.size.clone() + rhs.size.clone()),
-                size: lhs.size + rhs.size,
-                value: lhs.value + rhs.value,
-            }
-        } else {
-            Self {
-                price: lhs.price.clone(),
-                size: lhs.size + rhs.size.clone(),
-                value: lhs.value + rhs.value + (rhs.price - lhs.price) * rhs.size.neg(),
-            }
-        }
+        self += rhs;
+        self
     }
 }
 
@@ -289,10 +289,15 @@ mod test {
 
     #[test]
     fn basic_consuming() {
-        let h = NaivePosition::new(1, 2, 0);
+        let mut h = NaivePosition::new(1, 2, 0);
         let p = (h + 4).consumed().unwrap();
         assert_eq!(p.value, 0);
         assert_eq!(p.price, -1);
         assert_eq!(p.size, 2);
+        h += 4;
+        h.consume();
+        assert_eq!(h.value, 0);
+        assert_eq!(h.price, -1);
+        assert_eq!(h.size, 2);
     }
 }
