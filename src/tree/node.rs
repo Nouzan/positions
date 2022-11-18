@@ -45,4 +45,13 @@ where
         self.0 = self.0.clone() + position.into_naive_position();
         self.0.take()
     }
+
+    /// Eval the position by closing.
+    pub fn eval(&self, price: &T) -> T {
+        if self.0.size.is_zero() {
+            T::zero()
+        } else {
+            self.clone().add((price.clone(), -self.0.size.clone()))
+        }
+    }
 }
