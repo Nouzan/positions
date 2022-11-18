@@ -21,13 +21,9 @@ pub mod asset;
 #[cfg(feature = "std")]
 pub mod tree;
 
-/// Price representation.
+/// Legacy.
 #[deprecated(since = "0.2.0")]
-pub mod representation;
-
-/// Position with price representation.
-#[deprecated(since = "0.2.0")]
-pub mod position;
+pub mod legacy;
 
 /// Num trait that is required by position.
 pub trait PositionNum: Num + Signed + Clone + PartialOrd {}

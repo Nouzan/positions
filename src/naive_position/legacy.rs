@@ -1,6 +1,8 @@
 #![allow(deprecated)]
 
-use crate::{position::Position, representation::Representation, NaivePosition, PositionNum};
+use crate::{
+    legacy::position::Position, legacy::representation::Representation, NaivePosition, PositionNum,
+};
 
 impl<T: PositionNum> NaivePosition<T> {
     /// Create a [`Position`] from the [`NaivePosition`] directly,

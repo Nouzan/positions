@@ -1,7 +1,7 @@
 #![allow(deprecated)]
 
 use super::representation::{Normal, Representation, Reversed};
-use super::{IntoNaivePosition, NaivePosition, PositionNum};
+use crate::{IntoNaivePosition, NaivePosition, PositionNum};
 use core::fmt;
 use core::marker::PhantomData;
 use core::ops::{Add, Neg, Sub};
