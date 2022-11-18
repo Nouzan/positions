@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use super::representation::{Normal, Representation, Reversed};
 use super::{IntoNaivePosition, NaivePosition, PositionNum};
 use core::fmt;

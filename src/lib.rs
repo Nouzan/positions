@@ -10,9 +10,6 @@ use num_traits::{Num, Signed};
 
 pub use naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosition};
 
-#[cfg(test)]
-mod tests;
-
 /// Naive position without price representation.
 pub mod naive_position;
 
@@ -25,9 +22,11 @@ pub mod asset;
 pub mod tree;
 
 /// Price representation.
+#[deprecated(since = "0.2.0")]
 pub mod representation;
 
 /// Position with price representation.
+#[deprecated(since = "0.2.0")]
 pub mod position;
 
 /// Num trait that is required by position.

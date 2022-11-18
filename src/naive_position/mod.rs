@@ -1,11 +1,12 @@
-use crate::{position::Position, representation::Representation};
-
 use super::PositionNum;
 use core::ops::{Add, Neg, Sub};
 use num_traits::Zero;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[deprecated(since = "0.2.0")]
+mod legacy;
 
 /// Naive position (in normal representation).
 #[derive(Debug, Clone, Copy)]
@@ -268,21 +269,8 @@ where
     }
 }
 
-impl<T: PositionNum> NaivePosition<T> {
-    /// Create a [`Position`] from the [`NaivePosition`] directly,
-    /// without changing its price or size according to the representation.
-    pub fn into_position<Rep: Representation>(self) -> Position<Rep, T> {
-        Position {
-            naive: self,
-            _rep: core::marker::PhantomData::default(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use crate::representation::{Normal, Reversed};
-
     use super::*;
 
     #[test]
@@ -306,13 +294,5 @@ mod test {
         assert_eq!(p.value, 0);
         assert_eq!(p.price, -1);
         assert_eq!(p.size, 2);
-    }
-
-    #[test]
-    fn into_position() {
-        let h = NaivePosition::new(1, 2, 1);
-        let n = h.into_position::<Normal>();
-        let r = h.into_position::<Reversed>();
-        assert_eq!(n.naive, r.naive);
     }
 }
