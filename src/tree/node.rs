@@ -2,15 +2,6 @@ use core::ops::Deref;
 
 use crate::{IntoNaivePosition, NaivePosition, PositionNum};
 
-/// A node in the position tree.
-#[derive(Debug, Clone, Copy)]
-pub enum Node<T> {
-    /// A Value Node.
-    Value(ValueNode<T>),
-    /// Position Node.
-    Position(PositionNode<T>),
-}
-
 /// Value Node.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValueNode<T>(pub T);
