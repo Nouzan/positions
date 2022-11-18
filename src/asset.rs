@@ -14,6 +14,7 @@ use serde_with::{serde_as, DisplayFromStr};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
     prefer_reversed: bool,
+    value_contained: bool,
     #[serde_as(as = "DisplayFromStr")]
     kind: AssetKind,
 }
@@ -23,23 +24,30 @@ pub struct Asset {
 #[derive(Debug, Clone)]
 pub struct Asset {
     prefer_reversed: bool,
+    value_contained: bool,
     kind: AssetKind,
 }
 
 impl Asset {
-    /// Prefer reversed.
+    /// Is prefer reversed.
     pub fn is_prefer_reversed(&self) -> bool {
         self.prefer_reversed
     }
 
-    /// Set whether prefering reversed.
-    pub fn set_prefer_reversed(&mut self, reversed: bool) {
-        self.prefer_reversed = reversed;
+    /// Is value contained.
+    pub fn is_value_contained(&self) -> bool {
+        self.value_contained
     }
 
-    /// Set prefering reversed to `true`.
+    /// Set prefering reversed to be `true`.
     pub fn prefer_reversed(mut self) -> Self {
         self.prefer_reversed = true;
+        self
+    }
+
+    /// Set `value_contained` to be `true`.
+    pub fn value_contained(mut self) -> Self {
+        self.value_contained = true;
         self
     }
 
@@ -68,6 +76,7 @@ impl From<AssetKind> for Asset {
     fn from(kind: AssetKind) -> Self {
         Self {
             prefer_reversed: false,
+            value_contained: false,
             kind,
         }
     }
@@ -94,6 +103,7 @@ impl FromStr for Asset {
         let kind = AssetKind::from_str(s)?;
         Ok(Self {
             prefer_reversed: false,
+            value_contained: false,
             kind,
         })
     }
