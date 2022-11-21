@@ -1,4 +1,4 @@
-use crate::asset::Asset;
+use crate::{asset::Asset, Reversed};
 
 use super::*;
 use im::{hashmap, HashMap};
@@ -76,7 +76,13 @@ where
         if let Some(sv) = self.values.get_mut(asset) {
             sv.value += value;
         } else {
-            self.values.insert(asset.clone(), SingleValue::default());
+            self.values.insert(
+                asset.clone(),
+                SingleValue {
+                    value,
+                    ..Default::default()
+                },
+            );
         }
         self
     }
@@ -108,6 +114,41 @@ where
     }
 }
 
+impl<T> fmt::Display for SingleValue<T>
+where
+    T: fmt::Display + PositionNum,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const MIDDLE: &str = "├ ";
+        const LAST: &str = "└ ";
+        let len = self.positions.len();
+        for (idx, (inst, p)) in self.positions.iter().enumerate() {
+            if p.is_zero() {
+                continue;
+            }
+            if idx == len - 1 {
+                writeln!(f, "{LAST}{inst} => {p}")?;
+            } else {
+                writeln!(f, "{MIDDLE}{inst} => {p}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<T> fmt::Display for Positions<T>
+where
+    T: PositionNum + fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (asset, sv) in self.values.iter() {
+            writeln!(f, "{asset} => {} {asset}", sv.value)?;
+            write!(f, "{sv}")?;
+        }
+        Ok(())
+    }
+}
+
 impl<T> AddAssign<&Self> for Positions<T>
 where
     T: PositionNum,
@@ -132,6 +173,69 @@ where
     }
 }
 
+impl<T> AddAssign<Position<T>> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(&mut self, rhs: Position<T>) {
+        self.insert_position(rhs);
+    }
+}
+
+impl<'a, T> AddAssign<(T, &'a Asset)> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(&mut self, (value, asset): (T, &'a Asset)) {
+        self.insert_value(value, asset);
+    }
+}
+
+impl<'a, T> AddAssign<(T, T, &'a Instrument)> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(&mut self, (price, size, instrument): (T, T, &'a Instrument)) {
+        self.insert_position(Position::new(instrument.clone(), (price, size)));
+    }
+}
+
+impl<'a, T> AddAssign<(T, T, T, &'a Instrument)> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(&mut self, (price, size, value, instrument): (T, T, T, &'a Instrument)) {
+        self.insert_position(Position::new(instrument.clone(), (price, size, value)));
+    }
+}
+
+impl<'a, T> AddAssign<Reversed<(T, T, &'a Instrument)>> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(
+        &mut self,
+        Reversed((price, size, instrument)): Reversed<(T, T, &'a Instrument)>,
+    ) {
+        self.insert_position(Position::new(instrument.clone(), Reversed((price, size))));
+    }
+}
+
+impl<'a, T> AddAssign<Reversed<(T, T, T, &'a Instrument)>> for Positions<T>
+where
+    T: PositionNum,
+{
+    fn add_assign(
+        &mut self,
+        Reversed((price, size, value, instrument)): Reversed<(T, T, T, &'a Instrument)>,
+    ) {
+        self.insert_position(Position::new(
+            instrument.clone(),
+            Reversed((price, size, value)),
+        ));
+    }
+}
+
 impl<T> From<Position<T>> for Positions<T>
 where
     T: PositionNum,
@@ -146,5 +250,31 @@ where
         Self {
             values: hashmap! { asset => sv },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fraction::{BigInt, GenericDecimal};
+
+    type Decimal = GenericDecimal<BigInt, usize>;
+
+    #[test]
+    fn basic() {
+        let btc = Asset::btc();
+        let usdt = Asset::usdt();
+        let btc_usdt_swap = Instrument::new("BTC-USDT-SWAP", Asset::btc(), Asset::usdt());
+        let btc_usd_swap =
+            Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc()).prefer_reversed(true);
+        let eth_btc_swap = Instrument::new("ETH-BTC-SWAP", Asset::eth(), Asset::btc());
+        let mut p = Positions::default();
+        p += (Decimal::from(-16000), &usdt);
+        p += (Decimal::from(1), &btc);
+        p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        p += (Decimal::from(16001), Decimal::from(-1.5), &btc_usdt_swap);
+        println!("{p}");
     }
 }

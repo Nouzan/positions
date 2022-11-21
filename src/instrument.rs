@@ -1,3 +1,4 @@
+use alloc::fmt;
 use smol_str::SmolStr;
 
 use crate::asset::Asset;
@@ -62,5 +63,11 @@ impl From<(Asset, Asset)> for Instrument {
             base,
             quote,
         }
+    }
+}
+
+impl fmt::Display for Instrument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.symbol())
     }
 }

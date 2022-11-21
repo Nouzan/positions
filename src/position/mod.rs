@@ -103,23 +103,17 @@ where
         } else {
             ""
         };
-        let value = self.value();
-        let sign = if value.is_negative() { "-" } else { "+" };
         if let Some(price) = self.price() {
-            write!(
-                f,
-                "({price}, {} {base}){mark} {sign} {}",
-                self.size(),
-                value.abs(),
-            )
+            write!(f, "({price}, {} {base}){mark}", self.size(),)?;
         } else {
-            write!(
-                f,
-                "(Nan, {} {base}){mark} {sign} {}",
-                self.size(),
-                value.abs()
-            )
+            write!(f, "(Nan, {} {base}){mark}", self.size(),)?;
         }
+        let value = self.value();
+        if !value.is_zero() {
+            let sign = if value.is_negative() { " - " } else { " + " };
+            write!(f, "{sign}{}", value.abs())?;
+        }
+        Ok(())
     }
 }
 
