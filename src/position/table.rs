@@ -274,7 +274,12 @@ mod tests {
         p += (Decimal::from(1), &btc);
         p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
         p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
-        p += (Decimal::from(16001), Decimal::from(-1.5), &btc_usdt_swap);
+        p += (
+            Decimal::from(16001),
+            Decimal::from(-1.5),
+            Decimal::from(-2.7),
+            &btc_usdt_swap,
+        );
         println!("{p}");
     }
 }

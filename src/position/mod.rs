@@ -111,7 +111,7 @@ where
         let value = self.value();
         if !value.is_zero() {
             let sign = if value.is_negative() { " - " } else { " + " };
-            write!(f, "{sign}{}", value.abs())?;
+            write!(f, "{sign}{} {}", value.abs(), self.instrument.quote())?;
         }
         Ok(())
     }
