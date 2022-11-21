@@ -14,8 +14,10 @@ alloc = ["smol_str"]
 std = [
     "alloc",
     "thiserror",
+    "serde?/std",
+    "smol_str?/std",
 ]
-serde = ["dep:serde", "serde_with"]
+serde = ["dep:serde", "serde_with", "smol_str?/serde"]
 
 [dependencies]
 smol_str = { version = "0.1.23", default-features = false, optional = true }

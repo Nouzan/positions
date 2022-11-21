@@ -2,9 +2,14 @@ use alloc::fmt;
 use core::{hash::Hash, ops::Deref, str::FromStr};
 use smol_str::SmolStr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Asset.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Asset {
+    #[cfg_attr(feature = "serde", serde(flatten))]
     inner: SmolStr,
 }
 
@@ -19,7 +24,7 @@ impl FromStr for Asset {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self {
-            inner: SmolStr::new(s),
+            inner: SmolStr::new(s.to_uppercase()),
         })
     }
 }
