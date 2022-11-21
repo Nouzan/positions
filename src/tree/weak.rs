@@ -115,3 +115,22 @@ where
         }
     }
 }
+
+/// Type that can convert to [`WeakTree`].
+pub trait AsWeakTree<T> {
+    /// Convert to a [`WeakTree`].
+    fn as_weak_tree(&self) -> WeakTree<'_, T>;
+}
+
+impl<'a, T> AsWeakTree<T> for WeakTree<'a, T>
+where
+    T: PositionNum,
+{
+    fn as_weak_tree(&self) -> WeakTree<'_, T> {
+        WeakTree {
+            asset: self.asset,
+            value: self.value.clone(),
+            positions: self.positions.clone(),
+        }
+    }
+}

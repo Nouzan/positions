@@ -13,6 +13,10 @@ pub use naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosi
 /// Naive position without price representation.
 pub mod naive_position;
 
+/// Position.
+#[cfg(feature = "alloc")]
+pub mod position;
+
 /// Asset.
 #[cfg(feature = "alloc")]
 pub mod asset;
