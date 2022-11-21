@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
+    prefer_reversed: bool,
     symbol: SmolStr,
     base: Asset,
     quote: Asset,
@@ -18,10 +19,23 @@ impl Instrument {
     /// Create a new instrument.
     pub fn new(symbol: impl AsRef<str>, base: Asset, quote: Asset) -> Self {
         Self {
+            prefer_reversed: false,
             symbol: SmolStr::new(symbol),
             base,
             quote,
         }
+    }
+
+    /// Whether to mark this instrument as a reversed-prefering.
+    pub fn prefer_reversed(mut self, reversed: bool) -> Self {
+        self.prefer_reversed = reversed;
+        self
+    }
+
+    /// Is this instrument reversed-prefering.
+    /// Default to `false`.
+    pub fn is_prefer_reversed(&self) -> bool {
+        self.prefer_reversed
     }
 
     /// Get the symbol.
@@ -43,6 +57,7 @@ impl Instrument {
 impl From<(Asset, Asset)> for Instrument {
     fn from((base, quote): (Asset, Asset)) -> Self {
         Self {
+            prefer_reversed: false,
             symbol: SmolStr::new(format!("{base}-{quote}")),
             base,
             quote,
