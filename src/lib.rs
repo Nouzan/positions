@@ -21,6 +21,10 @@ pub mod position;
 #[cfg(feature = "alloc")]
 pub mod asset;
 
+/// Instrument.
+#[cfg(feature = "alloc")]
+pub mod instrument;
+
 /// Position Tree.
 #[cfg(feature = "std")]
 pub mod tree;
