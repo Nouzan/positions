@@ -58,7 +58,7 @@ impl From<(Asset, Asset)> for Instrument {
     fn from((base, quote): (Asset, Asset)) -> Self {
         Self {
             prefer_reversed: false,
-            symbol: SmolStr::new(format!("{base}-{quote}")),
+            symbol: SmolStr::new(alloc::format!("{base}-{quote}")),
             base,
             quote,
         }

@@ -6,7 +6,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-use num_traits::{NumAssignRef, NumRef, Signed};
+use num_traits::{NumAssignRef, Signed};
 
 pub use naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosition};
 
@@ -25,15 +25,15 @@ pub mod asset;
 #[cfg(feature = "alloc")]
 pub mod instrument;
 
-/// Position Tree.
-#[cfg(feature = "std")]
-pub mod tree;
+// /// Position Tree.
+// #[cfg(feature = "std")]
+// pub mod tree;
 
 /// Legacy.
 #[deprecated(since = "0.2.0")]
 pub mod legacy;
 
 /// Num trait that is required by position.
-pub trait PositionNum: NumAssignRef + NumRef + Signed + Clone + PartialOrd {}
+pub trait PositionNum: NumAssignRef + Signed + Clone + PartialOrd {}
 
-impl<T: NumAssignRef + NumRef + Signed + Clone + PartialOrd> PositionNum for T {}
+impl<T: NumAssignRef + Signed + Clone + PartialOrd> PositionNum for T {}
