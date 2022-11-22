@@ -1,6 +1,6 @@
 use alloc::fmt;
+use arcstr::{literal, ArcStr};
 use core::{hash::Hash, ops::Deref, str::FromStr};
-use smol_str::SmolStr;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Asset {
     #[cfg_attr(feature = "serde", serde(flatten))]
-    inner: SmolStr,
+    inner: ArcStr,
 }
 
 impl fmt::Display for Asset {
@@ -19,18 +19,33 @@ impl fmt::Display for Asset {
     }
 }
 
+impl<'a> From<&'a ArcStr> for Asset {
+    fn from(value: &'a ArcStr) -> Self {
+        let s = value.to_uppercase();
+        if s == *value {
+            Self {
+                inner: value.clone(),
+            }
+        } else {
+            Self {
+                inner: ArcStr::from(s),
+            }
+        }
+    }
+}
+
 impl FromStr for Asset {
     type Err = ParseAssetError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self {
-            inner: SmolStr::new(s.to_uppercase()),
+            inner: ArcStr::from(s.to_uppercase()),
         })
     }
 }
 
 impl Deref for Asset {
-    type Target = SmolStr;
+    type Target = str;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -47,28 +62,28 @@ impl Asset {
     /// Usdt.
     pub fn usdt() -> Self {
         Self {
-            inner: SmolStr::new_inline("USDT"),
+            inner: literal!("USDT"),
         }
     }
 
     /// Usd.
     pub fn usd() -> Self {
         Self {
-            inner: SmolStr::new_inline("USD"),
+            inner: literal!("USD"),
         }
     }
 
     /// Btc.
     pub fn btc() -> Self {
         Self {
-            inner: SmolStr::new_inline("BTC"),
+            inner: literal!("BTC"),
         }
     }
 
     /// Eth.
     pub fn eth() -> Self {
         Self {
-            inner: SmolStr::new_inline("ETH"),
+            inner: literal!("ETH"),
         }
     }
 }

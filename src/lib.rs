@@ -50,7 +50,7 @@ pub mod prelude {
 }
 
 #[cfg(feature = "alloc")]
-pub use prelude::*;
+pub use prelude::{Asset, HashMap, Instrument, ParseAssetError, Position, Positions};
 
 /// Num trait that is required by position.
 pub trait PositionNum: NumAssignRef + Signed + Clone + PartialOrd {}

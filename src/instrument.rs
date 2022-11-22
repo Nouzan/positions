@@ -1,5 +1,5 @@
 use alloc::fmt;
-use smol_str::SmolStr;
+use arcstr::ArcStr;
 
 use crate::asset::Asset;
 
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct Instrument {
     prefer_reversed: bool,
     derivative: bool,
-    symbol: SmolStr,
+    symbol: ArcStr,
     base: Asset,
     quote: Asset,
 }
@@ -23,7 +23,18 @@ impl Instrument {
         Self {
             prefer_reversed: false,
             derivative: true,
-            symbol: SmolStr::new(symbol),
+            symbol: ArcStr::from(symbol.as_ref()),
+            base,
+            quote,
+        }
+    }
+
+    /// Create with symbol provided by `ArcStr`.
+    pub fn with_arcstr(symbol: ArcStr, base: Asset, quote: Asset) -> Self {
+        Self {
+            prefer_reversed: false,
+            derivative: true,
+            symbol,
             base,
             quote,
         }
@@ -78,7 +89,7 @@ impl From<(Asset, Asset)> for Instrument {
         Self {
             prefer_reversed: false,
             derivative: false,
-            symbol: SmolStr::new(alloc::format!("{base}-{quote}")),
+            symbol: arcstr::format!("{base}-{quote}"),
             base,
             quote,
         }
