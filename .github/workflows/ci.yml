@@ -30,6 +30,14 @@ jobs:
               - beta
               - nightly
               - 1.65.0 # MSRV
+            features:
+              - --all-features
+              - --no-default-features
+              - --no-default-features --features alloc
+              - --no-default-features --features std
+              - --no-default-features --features serde
+              - --no-default-features --features serde,alloc
+              - --no-default-features --features serde,std
 
         steps:
           - name: Checkout
@@ -53,7 +61,7 @@ jobs:
             if: ${{ !contains(github.event.head_commit.message, 'skip test') }}
             with:
               command: build
-              args: --all-features
+              args: ${{ matrix.features }}
 
           - name: Check Format
             uses: actions-rs/cargo@v1
@@ -67,11 +75,11 @@ jobs:
             if: ${{ !contains(github.event.head_commit.message, 'skip test') }}
             with:
               command: clippy
-              args: --all --all-targets --all-features
+              args: --all --all-targets ${{ matrix.features }}
 
           - name: Test
             uses: actions-rs/cargo@v1
             if: ${{ !contains(github.event.head_commit.message, 'skip test') }}
             with:
               command: test
-              args: --all-features
+              args: ${{ matrix.features }}
