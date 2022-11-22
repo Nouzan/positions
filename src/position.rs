@@ -471,9 +471,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{asset::Asset, Reversed};
-
     use super::*;
+    use crate::{asset::Asset, Reversed};
     use fraction::{BigInt, GenericDecimal, Zero};
 
     type Decimal = GenericDecimal<BigInt, usize>;
@@ -488,6 +487,7 @@ mod tests {
         p += (Decimal::from(2.3), Decimal::from(2.5));
         p += (Decimal::from(7.3), Decimal::from(3.4));
         p += (Decimal::from(3.7), Decimal::from(-7.8), Decimal::from(12));
+        #[cfg(feature = "std")]
         println!("{p}");
         assert_eq!(
             p,
@@ -496,6 +496,7 @@ mod tests {
                 (Decimal::from(3.7), Decimal::from(-1.9), Decimal::from(4.7),)
             )
         );
+        #[cfg(feature = "std")]
         println!("{}", p.as_tree());
     }
 
@@ -509,11 +510,13 @@ mod tests {
         p += Reversed((Decimal::from(3), Decimal::from(2)));
         p += Reversed((Decimal::from(4), Decimal::from(1)));
         p += Reversed((Decimal::from(2), Decimal::from(-7), Decimal::from(-1.4)));
+        #[cfg(feature = "std")]
         println!("{p}");
         assert_eq!(
             *p.value(),
             (Decimal::from(-29) / Decimal::from(60)).set_precision(1),
         );
+        #[cfg(feature = "std")]
         println!("{}", p.as_tree());
     }
 
@@ -536,6 +539,7 @@ mod tests {
             Decimal::from(-2.7),
             &btc_usdt_swap,
         );
+        #[cfg(feature = "std")]
         println!("{p}");
     }
 
@@ -559,6 +563,7 @@ mod tests {
             &btc_usdt_swap,
         );
         let tree = p.as_tree(&usdt);
+        #[cfg(feature = "std")]
         println!("{tree}");
         let prices = HashMap::from([
             (eth_btc_swap.clone(), Decimal::from(0.059)),
@@ -572,10 +577,12 @@ mod tests {
                 Decimal::from(17000),
             ),
         ]);
+        #[cfg(feature = "std")]
         for inst in tree.instruments() {
             println!("{inst}");
         }
         let ans = tree.eval(&prices).unwrap().set_precision(1);
+        #[cfg(feature = "std")]
         println!("{ans}");
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
     }
