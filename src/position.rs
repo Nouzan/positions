@@ -92,6 +92,12 @@ where
         }
     }
 
+    /// Take the value of the position.
+    #[inline]
+    pub fn take(&mut self) -> T {
+        self.naive.take()
+    }
+
     /// Is this a zero position whose `size` and `value` are both zero.
     pub fn is_zero(&self) -> bool {
         self.naive.size.is_zero() && self.naive.value.is_zero()
@@ -208,6 +214,15 @@ where
         } else {
             self.positions.insert(position.instrument.clone(), position);
         }
+    }
+
+    fn concentrate(&mut self) {
+        let value = self
+            .positions
+            .values_mut()
+            .map(|p| p.take())
+            .fold(T::zero(), T::add);
+        self.value += value;
     }
 }
 
@@ -327,6 +342,13 @@ where
     /// Get the mutable reference of the value of the given asset.
     pub fn get_value_mut(&mut self, asset: &Asset) -> Option<&mut T> {
         Some(&mut self.values.get_mut(asset)?.value)
+    }
+
+    /// Concentrate the values.
+    pub fn concentrate(&mut self) {
+        for sv in self.values.values_mut() {
+            sv.concentrate();
+        }
     }
 }
 

@@ -7,9 +7,13 @@ const FEE_RATE: f64 = -0.001;
 
 fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
     let mut p = Positions::default();
-    p += (-at * size.clone(), &Asset::usdt());
+    p += (-at.clone() * size.clone(), &Asset::usdt());
     p += (size.clone(), &Asset::btc());
-    p += (size.abs() * Decimal::from(FEE_RATE), &Asset::btc());
+    if size.is_sign_positive() {
+        p += (size.abs() * Decimal::from(FEE_RATE), &Asset::btc());
+    } else {
+        p += (size.abs() * at * Decimal::from(FEE_RATE), &Asset::usdt());
+    }
     p
 }
 
@@ -40,7 +44,7 @@ fn main() -> anyhow::Result<()> {
         Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc()).prefer_reversed(true);
     let mut prices = HashMap::from([
         (btc_usdt.clone(), Decimal::from(16000)),
-        (btc_usd_swap.clone(), Decimal::from(16005)),
+        (btc_usd_swap.clone(), Decimal::from(16000)),
     ]);
 
     let mut account = Positions::default();
@@ -54,13 +58,14 @@ fn main() -> anyhow::Result<()> {
     println!("------ 8 hours later -------\n");
 
     *prices.get_mut(&btc_usdt).unwrap() = Decimal::from(17000);
-    *prices.get_mut(&btc_usd_swap).unwrap() = Decimal::from(17004);
+    *prices.get_mut(&btc_usd_swap).unwrap() = Decimal::from(17000);
 
     let p = account.get_position(&btc_usd_swap).unwrap().clone();
     let value = p.as_naive().price.clone() * p.as_naive().size.clone();
     account += interest(value, Decimal::from(0.000038));
     println!("{account}");
     account += buy_swap(-p.size(), prices.get(&btc_usd_swap).unwrap().clone());
+    account.concentrate();
     println!("{account}");
     let btc = account.get_value(&btc).unwrap().clone();
     account += buy_btc(-btc, prices.get(&btc_usdt).unwrap().clone());
