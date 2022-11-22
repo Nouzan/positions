@@ -106,7 +106,7 @@ where
     H: ToNaivePosition<T>,
 {
     fn eq(&self, other: &H) -> bool {
-        let other = other.to_naive_position();
+        let other = other.to_naive();
         if self.size.eq(&other.size) {
             if self.price.eq(&other.price) && self.value.eq(&other.value) {
                 true
@@ -139,7 +139,7 @@ impl<T: PositionNum> Zero for NaivePosition<T> {
 /// Types that can convert into a [`NaivePosition`].
 pub trait IntoNaivePosition<T: PositionNum> {
     /// Convert to a `NaivePosition`.
-    fn into_naive_position(self) -> NaivePosition<T>;
+    fn into_naive(self) -> NaivePosition<T>;
 
     /// Mark this position as reversed-form.
     fn reversed(self) -> Reversed<Self>
@@ -151,13 +151,13 @@ pub trait IntoNaivePosition<T: PositionNum> {
 }
 
 impl<T: PositionNum> IntoNaivePosition<T> for NaivePosition<T> {
-    fn into_naive_position(self) -> NaivePosition<T> {
+    fn into_naive(self) -> NaivePosition<T> {
         self
     }
 }
 
 impl<T: PositionNum> IntoNaivePosition<T> for (T, T, T) {
-    fn into_naive_position(self) -> NaivePosition<T> {
+    fn into_naive(self) -> NaivePosition<T> {
         NaivePosition {
             price: self.0,
             size: self.1,
@@ -167,7 +167,7 @@ impl<T: PositionNum> IntoNaivePosition<T> for (T, T, T) {
 }
 
 impl<T: PositionNum> IntoNaivePosition<T> for (T, T) {
-    fn into_naive_position(self) -> NaivePosition<T> {
+    fn into_naive(self) -> NaivePosition<T> {
         NaivePosition {
             price: self.0,
             size: self.1,
@@ -177,7 +177,7 @@ impl<T: PositionNum> IntoNaivePosition<T> for (T, T) {
 }
 
 impl<T: PositionNum> IntoNaivePosition<T> for T {
-    fn into_naive_position(self) -> NaivePosition<T> {
+    fn into_naive(self) -> NaivePosition<T> {
         NaivePosition {
             price: T::one(),
             size: T::zero(),
@@ -198,8 +198,8 @@ where
     /// Convert into a naive position in reversed form.
     /// # Panic
     /// Panic if the `price` is zero.
-    fn into_naive_position(self) -> NaivePosition<T> {
-        let NaivePosition { price, size, value } = self.0.into_naive_position();
+    fn into_naive(self) -> NaivePosition<T> {
+        let NaivePosition { price, size, value } = self.0.into_naive();
         if price.is_zero() {
             panic!("zero price cannot be convert into reversed form");
         }
@@ -214,12 +214,12 @@ where
 /// Types that can convert to [`NaivePosition`] by ref.
 pub trait ToNaivePosition<T: PositionNum> {
     /// Convert to a `NaivePosition`.
-    fn to_naive_position(&self) -> NaivePosition<T>;
+    fn to_naive(&self) -> NaivePosition<T>;
 }
 
 impl<T: PositionNum, H: Clone + IntoNaivePosition<T>> ToNaivePosition<T> for H {
-    fn to_naive_position(&self) -> NaivePosition<T> {
-        self.clone().into_naive_position()
+    fn to_naive(&self) -> NaivePosition<T> {
+        self.clone().into_naive()
     }
 }
 
@@ -228,7 +228,7 @@ where
     H: IntoNaivePosition<T>,
 {
     fn add_assign(&mut self, rhs: H) {
-        let mut rhs = rhs.into_naive_position();
+        let mut rhs = rhs.into_naive();
         if self.size.abs() <= rhs.size.abs() {
             core::mem::swap(self, &mut rhs);
         }
@@ -261,7 +261,7 @@ where
     type Output = Self;
 
     fn add(mut self, rhs: H) -> Self::Output {
-        let rhs = rhs.into_naive_position();
+        let rhs = rhs.into_naive();
         self += rhs;
         self
     }
@@ -286,7 +286,7 @@ where
     type Output = Self;
 
     fn sub(self, rhs: H) -> Self::Output {
-        let rhs = rhs.into_naive_position().neg();
+        let rhs = rhs.into_naive().neg();
         self.add(rhs)
     }
 }
@@ -296,7 +296,7 @@ where
     H: IntoNaivePosition<T>,
 {
     fn sub_assign(&mut self, rhs: H) {
-        self.add_assign(rhs.into_naive_position().neg());
+        self.add_assign(rhs.into_naive().neg());
     }
 }
 

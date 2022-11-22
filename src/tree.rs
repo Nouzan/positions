@@ -1,4 +1,4 @@
-use crate::{Asset, HashMap, Instrument, Position, PositionNum};
+use crate::{Asset, HashMap, Instrument, Position, PositionNum, ToNaivePosition};
 use alloc::{boxed::Box, fmt};
 
 /// Position Tree.
@@ -39,6 +39,29 @@ where
             .positions
             .iter()
             .map(|(inst, p)| Some(p.closed(prices.get(*inst)?)))
+            .try_fold(children, |acc, x| Some(acc + x?))?;
+        ans += &self.value;
+        Some(ans)
+    }
+
+    /// Evaluate the position tree with the result price of the given function.
+    /// Return `None` if there is something wrong.
+    pub fn eval_with<F>(&self, mut f: F) -> Option<T>
+    where
+        F: FnMut(&Instrument, &dyn ToNaivePosition<T>) -> Option<T>,
+    {
+        let children = self
+            .children
+            .iter()
+            .map(|(inst, t)| {
+                let value = t.eval_with(&mut f)?;
+                (f)(inst, &(T::zero(), value))
+            })
+            .try_fold(T::zero(), |acc, x| Some(acc + x?))?;
+        let mut ans = self
+            .positions
+            .iter()
+            .map(|(inst, p)| (f)(inst, p))
             .try_fold(children, |acc, x| Some(acc + x?))?;
         ans += &self.value;
         Some(ans)
