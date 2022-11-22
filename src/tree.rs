@@ -46,10 +46,12 @@ where
 
     /// Evaluate the position tree with the result price of the given function.
     /// Return `None` if there is something wrong.
-    pub fn eval_with<F>(&self, mut f: F) -> Option<T>
+    #[allow(clippy::type_complexity)]
+    pub fn eval_with<F>(&self, f: F) -> Option<T>
     where
         F: FnMut(&Instrument, &dyn ToNaivePosition<T>) -> Option<T>,
     {
+        let mut f: Box<dyn FnMut(&Instrument, &dyn ToNaivePosition<T>) -> Option<T>> = Box::new(f);
         let children = self
             .children
             .iter()
