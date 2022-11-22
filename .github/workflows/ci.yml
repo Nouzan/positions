@@ -19,7 +19,7 @@ on:
 
 jobs:
     rust-test:
-        name: Test on Rust ${{ matrix.rust }}
+        name: Test on Rust ${{ matrix.rust }} with ${{ matrix.features }}
         runs-on: ubuntu-latest
         if: "!contains(github.event.head_commit.message, 'skip ci')"
 
