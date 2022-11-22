@@ -5,6 +5,8 @@ use core::{hash::Hash, ops::Deref, str::FromStr};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::{PositionNum, Positions};
+
 /// Asset.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -85,5 +87,15 @@ impl Asset {
         Self {
             inner: literal!("ETH"),
         }
+    }
+
+    /// Create a [`Positions`] with only value of this asset.
+    pub fn to_positions<T>(&self, value: T) -> Positions<T>
+    where
+        T: PositionNum,
+    {
+        let mut p = Positions::default();
+        p.insert_value(value, self);
+        p
     }
 }

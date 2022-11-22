@@ -1,7 +1,7 @@
 use alloc::fmt;
 use arcstr::ArcStr;
 
-use crate::asset::Asset;
+use crate::{asset::Asset, IntoNaivePosition, Position, PositionNum, Positions};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -81,6 +81,26 @@ impl Instrument {
     /// Get the quote asset.
     pub fn quote(&self) -> &Asset {
         &self.quote
+    }
+
+    /// Create a [`Position`] with the given position of this instrument.
+    #[inline]
+    pub fn into_position<T, P>(self, position: P) -> Position<T>
+    where
+        T: PositionNum,
+        P: IntoNaivePosition<T>,
+    {
+        Position::new(self, position)
+    }
+
+    /// Create a [`Positions`] with the given position of this instrument.
+    #[inline]
+    pub fn into_positions<T, P>(self, position: P) -> Positions<T>
+    where
+        T: PositionNum,
+        P: IntoNaivePosition<T>,
+    {
+        self.into_position(position).into()
     }
 }
 

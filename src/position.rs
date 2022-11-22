@@ -262,10 +262,18 @@ where
 }
 
 /// A table of positions.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Positions<T> {
     values: HashMap<Asset, SingleValue<T>>,
+}
+
+impl<T> Default for Positions<T> {
+    fn default() -> Self {
+        Self {
+            values: Default::default(),
+        }
+    }
 }
 
 impl<T> Positions<T>

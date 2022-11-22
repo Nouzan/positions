@@ -8,8 +8,7 @@ const FEE_RATE: f64 = -0.001;
 const BTC_USD_SWAP: ArcStr = arcstr::literal!("BTC-USD-SWAP");
 
 fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
-    let mut p = Positions::default();
-    p += (-at.clone() * size.clone(), &Asset::usdt());
+    let mut p = Asset::usdt().to_positions(-at.clone() * size.clone());
     p += (size.clone(), &Asset::btc());
     if size.is_sign_positive() {
         p += (size.abs() * Decimal::from(FEE_RATE), &Asset::btc());
@@ -20,10 +19,9 @@ fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
 }
 
 fn buy_swap(size: Decimal, at: Decimal) -> Positions<Decimal> {
-    let p = Position::new(
-        Instrument::with_arcstr(BTC_USD_SWAP, Asset::usd(), Asset::btc()).prefer_reversed(true),
-        (at, size).reversed(),
-    );
+    let p = Instrument::with_arcstr(BTC_USD_SWAP, Asset::usd(), Asset::btc())
+        .prefer_reversed(true)
+        .into_position((at, size).reversed());
     let fee =
         (p.as_naive().price.clone() * p.as_naive().size.clone()).abs() * Decimal::from(FEE_RATE);
     let quote = p.instrument().quote().clone();
@@ -33,9 +31,7 @@ fn buy_swap(size: Decimal, at: Decimal) -> Positions<Decimal> {
 }
 
 fn interest(value: Decimal, rate: Decimal) -> Positions<Decimal> {
-    let mut p = Positions::default();
-    p += (value * rate, &Asset::btc());
-    p
+    Asset::btc().to_positions(value * rate)
 }
 
 fn main() -> anyhow::Result<()> {
