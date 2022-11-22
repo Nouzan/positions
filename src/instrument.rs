@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
     prefer_reversed: bool,
+    derivative: bool,
     symbol: SmolStr,
     base: Asset,
     quote: Asset,
@@ -21,6 +22,7 @@ impl Instrument {
     pub fn new(symbol: impl AsRef<str>, base: Asset, quote: Asset) -> Self {
         Self {
             prefer_reversed: false,
+            derivative: true,
             symbol: SmolStr::new(symbol),
             base,
             quote,
@@ -28,8 +30,17 @@ impl Instrument {
     }
 
     /// Whether to mark this instrument as a reversed-prefering.
+    /// Default to `false`.
     pub fn prefer_reversed(mut self, reversed: bool) -> Self {
         self.prefer_reversed = reversed;
+        self
+    }
+
+    /// Whether to mark this insturment as a derivative.
+    /// Default to `true` if constructed by [`Instrument::new`],
+    /// and `false` if constructed from [`Asset`] pairs.
+    pub fn derivative(mut self, derivative: bool) -> Self {
+        self.derivative = derivative;
         self
     }
 
@@ -37,6 +48,13 @@ impl Instrument {
     /// Default to `false`.
     pub fn is_prefer_reversed(&self) -> bool {
         self.prefer_reversed
+    }
+
+    /// Is this instrument a derivative.
+    /// Default to `true` if constructed by [`Instrument::new`],
+    /// and `false` if constructed from [`Asset`] pairs.
+    pub fn is_derivative(&self) -> bool {
+        self.derivative
     }
 
     /// Get the symbol.
@@ -59,6 +77,7 @@ impl From<(Asset, Asset)> for Instrument {
     fn from((base, quote): (Asset, Asset)) -> Self {
         Self {
             prefer_reversed: false,
+            derivative: false,
             symbol: SmolStr::new(alloc::format!("{base}-{quote}")),
             base,
             quote,
