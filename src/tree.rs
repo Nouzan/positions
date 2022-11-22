@@ -56,7 +56,7 @@ where
             .children
             .iter()
             .map(|(inst, t)| {
-                let value = t.eval_with(|inst, p| (f)(inst, p))?;
+                let value = t.eval_with(&mut f)?;
                 (f)(inst, &(T::zero(), value))
             })
             .try_fold(T::zero(), |acc, x| Some(acc + x?))?;
