@@ -5,8 +5,12 @@ use crate::{
 use alloc::fmt;
 use core::ops::{AddAssign, Neg, SubAssign};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Position.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Position<T> {
     instrument: Instrument,
     naive: NaivePosition<T>,
@@ -175,6 +179,7 @@ where
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 struct SingleValue<T> {
     value: T,
     positions: HashMap<Instrument, Position<T>>,
@@ -225,6 +230,7 @@ where
 
 /// A table of positions.
 #[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Positions<T> {
     values: HashMap<Asset, SingleValue<T>>,
 }

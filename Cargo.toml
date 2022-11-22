@@ -8,6 +8,10 @@ license = "MIT"
 keywords = ["finance"]
 rust-version = "1.65.0"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 default = ["std", "serde"]
 alloc = [
