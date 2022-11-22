@@ -1,5 +1,5 @@
 use super::PositionNum;
-use core::ops::{Add, AddAssign, Neg, Sub};
+use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use num_traits::Zero;
 
 #[cfg(feature = "serde")]
@@ -43,8 +43,11 @@ impl<T: PositionNum> NaivePosition<T> {
         if self.size.is_zero() {
             None
         } else {
+            let mut price = self.value.clone().neg();
+            price /= &self.size;
+            price += &self.price;
             Some(Self {
-                price: (self.value.clone() / &self.size).neg() + &self.price,
+                price,
                 size: self.size.clone(),
                 value: T::zero(),
             })
@@ -56,7 +59,9 @@ impl<T: PositionNum> NaivePosition<T> {
     /// No effect if `size` is zero.
     pub fn consume(&mut self) {
         if !self.size.is_zero() {
-            self.price -= self.value.clone() / &self.size;
+            let mut delta = self.value.clone();
+            delta /= &self.size;
+            self.price -= delta;
             self.value = T::zero();
         }
     }
@@ -65,7 +70,9 @@ impl<T: PositionNum> NaivePosition<T> {
     /// but keep equivalent to the original position.
     /// (Equivalence II)
     pub fn converted(&self, price: T) -> Self {
-        let value = (price.clone() - &self.price) * &self.size;
+        let mut value = price.clone();
+        value -= &self.price;
+        value *= &self.size;
         Self {
             price,
             size: self.size.clone(),
@@ -77,9 +84,10 @@ impl<T: PositionNum> NaivePosition<T> {
     /// but keep equivalent to the original.
     /// (Equivalence II)
     pub fn convert(&mut self, price: T) {
-        let value = (price.clone() - &self.price) * &self.size;
+        self.value = price.clone();
+        self.value -= &self.price;
+        self.value *= &self.size;
         self.price = price;
-        self.value = value;
     }
 
     /// Take the `value` and keep the `price` and `size` unchanged.
@@ -214,20 +222,26 @@ where
     fn add_assign(&mut self, rhs: H) {
         let mut rhs = rhs.into_naive_position();
         if self.size.abs() <= rhs.size.abs() {
-            std::mem::swap(self, &mut rhs);
+            core::mem::swap(self, &mut rhs);
         }
         if rhs.size.is_zero() {
             self.value += rhs.value;
         } else if (self.size.is_positive() && rhs.size.is_positive())
             || (self.size.is_negative() && rhs.size.is_negative())
         {
-            self.price = ((self.price.clone() * &self.size) + (rhs.price * &rhs.size))
-                / (self.size.clone() + &rhs.size);
+            let mut v1 = self.price.clone();
+            v1 *= &self.size;
+            rhs.price *= &rhs.size;
+            let mut total = self.size.clone();
+            total += &rhs.size;
+            self.price = v1 + rhs.price;
+            self.price /= total;
             self.size += rhs.size;
             self.value += rhs.value;
         } else {
             self.size += &rhs.size;
-            self.value += rhs.value + (rhs.price - &self.price) * rhs.size.neg();
+            rhs.price -= &self.price;
+            self.value += rhs.value + rhs.price * rhs.size.neg();
         }
     }
 }
@@ -266,6 +280,15 @@ where
     fn sub(self, rhs: H) -> Self::Output {
         let rhs = rhs.into_naive_position().neg();
         self.add(rhs)
+    }
+}
+
+impl<T: PositionNum, H> SubAssign<H> for NaivePosition<T>
+where
+    H: IntoNaivePosition<T>,
+{
+    fn sub_assign(&mut self, rhs: H) {
+        self.add_assign(rhs.into_naive_position().neg());
     }
 }
 
