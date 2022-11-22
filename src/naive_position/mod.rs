@@ -140,6 +140,14 @@ impl<T: PositionNum> Zero for NaivePosition<T> {
 pub trait IntoNaivePosition<T: PositionNum> {
     /// Convert to a `NaivePosition`.
     fn into_naive_position(self) -> NaivePosition<T>;
+
+    /// Mark this position as reversed-form.
+    fn reversed(self) -> Reversed<Self>
+    where
+        Self: Sized,
+    {
+        Reversed(self)
+    }
 }
 
 impl<T: PositionNum> IntoNaivePosition<T> for NaivePosition<T> {

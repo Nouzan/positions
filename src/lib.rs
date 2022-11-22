@@ -38,8 +38,8 @@ pub mod legacy;
 pub mod prelude {
     pub use crate::asset::{Asset, ParseAssetError};
     pub use crate::instrument::Instrument;
+    pub use crate::naive_position::IntoNaivePosition;
     pub use crate::position::{Position, Positions};
-    pub use crate::tree::PositionTree;
     pub use crate::PositionNum;
 
     #[cfg(not(feature = "std"))]

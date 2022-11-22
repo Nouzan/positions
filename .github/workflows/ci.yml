@@ -31,12 +31,12 @@ jobs:
               - nightly
               - 1.65.0 # MSRV
             features:
-              - --all-features
+              - --all-targets --all-features
               - --no-default-features
-              - --no-default-features --features alloc
-              - --no-default-features --features std
+              - --all-targets --no-default-features --features alloc
+              - --all-targets --no-default-features --features std
               - --no-default-features --features serde
-              - --no-default-features --features serde,alloc
+              - --all-targets --no-default-features --features serde,alloc
 
         steps:
           - name: Checkout
@@ -74,7 +74,7 @@ jobs:
             if: ${{ !contains(github.event.head_commit.message, 'skip test') }}
             with:
               command: clippy
-              args: --all --all-targets ${{ matrix.features }}
+              args: --all ${{ matrix.features }}
 
           - name: Test
             uses: actions-rs/cargo@v1

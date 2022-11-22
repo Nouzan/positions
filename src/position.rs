@@ -1,6 +1,6 @@
 use crate::{
-    instrument::Instrument, Asset, HashMap, IntoNaivePosition, NaivePosition, PositionNum,
-    PositionTree, Reversed,
+    instrument::Instrument, tree::PositionTree, Asset, HashMap, IntoNaivePosition, NaivePosition,
+    PositionNum, Reversed,
 };
 use alloc::fmt;
 use core::ops::{AddAssign, Neg, SubAssign};
@@ -330,41 +330,6 @@ where
     }
 }
 
-impl<T> fmt::Display for SingleValue<T>
-where
-    T: fmt::Display + PositionNum,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        const MIDDLE: &str = "├ ";
-        const LAST: &str = "└ ";
-        let len = self.positions.len();
-        for (idx, (inst, p)) in self.positions.iter().enumerate() {
-            if p.is_zero() {
-                continue;
-            }
-            if idx == len - 1 {
-                writeln!(f, "{LAST}{inst} => {p}")?;
-            } else {
-                writeln!(f, "{MIDDLE}{inst} => {p}")?;
-            }
-        }
-        Ok(())
-    }
-}
-
-impl<T> fmt::Display for Positions<T>
-where
-    T: PositionNum + fmt::Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (asset, sv) in self.values.iter() {
-            writeln!(f, "{asset} => {} {asset}", sv.value)?;
-            write!(f, "{sv}")?;
-        }
-        Ok(())
-    }
-}
-
 impl<T> AddAssign<&Self> for Positions<T>
 where
     T: PositionNum,
@@ -466,6 +431,41 @@ where
         Self {
             values: HashMap::from([(asset, sv)]),
         }
+    }
+}
+
+impl<T> fmt::Display for SingleValue<T>
+where
+    T: fmt::Display + PositionNum,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const MIDDLE: &str = "├ ";
+        const LAST: &str = "└ ";
+        let len = self.positions.len();
+        for (idx, (inst, p)) in self.positions.iter().enumerate() {
+            if p.is_zero() {
+                continue;
+            }
+            if idx == len - 1 {
+                writeln!(f, "{LAST}{inst} => {p}")?;
+            } else {
+                writeln!(f, "{MIDDLE}{inst} => {p}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<T> fmt::Display for Positions<T>
+where
+    T: PositionNum + fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (asset, sv) in self.values.iter() {
+            writeln!(f, "{asset} => {} {asset}", sv.value)?;
+            write!(f, "{sv}")?;
+        }
+        Ok(())
     }
 }
 
