@@ -35,7 +35,7 @@ impl<'a> From<&'a ArcStr> for Asset {
 }
 
 impl FromStr for Asset {
-    type Err = ParseAssetError;
+    type Err = core::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self {
@@ -85,17 +85,5 @@ impl Asset {
         Self {
             inner: literal!("ETH"),
         }
-    }
-}
-
-/// Parse Asset Error.
-#[derive(Debug)]
-#[cfg_attr(feature = "thiserror", derive(thiserror::Error))]
-pub enum ParseAssetError {}
-
-#[cfg(not(feature = "thiserror"))]
-impl fmt::Display for ParseAssetError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Parse Asset Error")
     }
 }

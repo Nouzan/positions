@@ -36,7 +36,7 @@ pub mod legacy;
 /// Prelude.
 #[cfg(feature = "alloc")]
 pub mod prelude {
-    pub use crate::asset::{Asset, ParseAssetError};
+    pub use crate::asset::Asset;
     pub use crate::instrument::Instrument;
     pub use crate::naive_position::IntoNaivePosition;
     pub use crate::position::{Position, Positions};
@@ -50,7 +50,7 @@ pub mod prelude {
 }
 
 #[cfg(feature = "alloc")]
-pub use prelude::{Asset, HashMap, Instrument, ParseAssetError, Position, Positions};
+pub use prelude::{Asset, HashMap, Instrument, Position, Positions};
 
 /// Num trait that is required by position.
 pub trait PositionNum: NumAssignRef + Signed + Clone + PartialOrd {}
