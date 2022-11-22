@@ -25,13 +25,32 @@ pub mod asset;
 #[cfg(feature = "alloc")]
 pub mod instrument;
 
-// /// Position Tree.
-// #[cfg(feature = "std")]
-// pub mod tree;
+/// Position Tree.
+#[cfg(feature = "alloc")]
+pub mod tree;
 
 /// Legacy.
 #[deprecated(since = "0.2.0")]
 pub mod legacy;
+
+/// Prelude.
+#[cfg(feature = "alloc")]
+pub mod prelude {
+    pub use crate::asset::{Asset, ParseAssetError};
+    pub use crate::instrument::Instrument;
+    pub use crate::position::{Position, Positions};
+    pub use crate::tree::PositionTree;
+    pub use crate::PositionNum;
+
+    #[cfg(not(feature = "std"))]
+    pub use hashbrown::HashMap;
+
+    #[cfg(feature = "std")]
+    pub use std::collections::HashMap;
+}
+
+#[cfg(feature = "alloc")]
+pub use prelude::*;
 
 /// Num trait that is required by position.
 pub trait PositionNum: NumAssignRef + Signed + Clone + PartialOrd {}
