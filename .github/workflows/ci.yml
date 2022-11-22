@@ -32,10 +32,10 @@ jobs:
               - 1.65.0 # MSRV
             features:
               - --all-targets --all-features
-              - --no-default-features
+              - --lib --no-default-features
               - --all-targets --no-default-features --features alloc
               - --all-targets --no-default-features --features std
-              - --no-default-features --features serde
+              - --lib --no-default-features --features serde
               - --all-targets --no-default-features --features serde,alloc
 
         steps:
