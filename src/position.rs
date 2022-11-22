@@ -98,6 +98,24 @@ where
         self.naive.take()
     }
 
+    /// Convert the price to the given.
+    /// # Warning
+    /// The `to` price is treated to be in the reversed-form
+    /// if the `instrument` is reversed-prefering.
+    /// # Panic
+    /// Panic if `to` is in the reversed-form and is zero.
+    pub fn convert(&mut self, to: T) {
+        let to = if self.instrument.is_prefer_reversed() {
+            if to.is_zero() {
+                panic!("the price in reversed-form cannot be zero");
+            }
+            T::one() / to
+        } else {
+            to
+        };
+        self.naive.convert(to);
+    }
+
     /// Is this a zero position whose `size` and `value` are both zero.
     pub fn is_zero(&self) -> bool {
         self.naive.size.is_zero() && self.naive.value.is_zero()
