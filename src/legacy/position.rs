@@ -71,7 +71,7 @@ impl<Rep: Representation, T: PositionNum> Position<Rep, T> {
     /// Create a [`Position`] directly from [`IntoNaivePosition`].
     pub(crate) fn with_naive<H: IntoNaivePosition<T>>(naive: H) -> Self {
         Self {
-            naive: naive.into_naive_position(),
+            naive: naive.into_naive(),
             _rep: PhantomData::default(),
         }
     }
@@ -95,7 +95,7 @@ impl<Rep: Representation, T: PositionNum> Position<Rep, T> {
     ///
     /// This method will convert the price and size of `naive` by `Rep`.
     pub fn from_naive<H: IntoNaivePosition<T>>(naive: H) -> Option<Self> {
-        let NaivePosition { price, size, value } = naive.into_naive_position();
+        let NaivePosition { price, size, value } = naive.into_naive();
         Self::new(price, size, value)
     }
 
@@ -176,7 +176,7 @@ impl<Rep: Representation, T: PositionNum> Position<Rep, T> {
 }
 
 impl<Rep: Representation, T: PositionNum> IntoNaivePosition<T> for Position<Rep, T> {
-    fn into_naive_position(self) -> NaivePosition<T> {
+    fn into_naive(self) -> NaivePosition<T> {
         self.naive
     }
 }

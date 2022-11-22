@@ -41,7 +41,7 @@ where
     pub fn new(instrument: Instrument, position: impl IntoNaivePosition<T>) -> Self {
         Self {
             instrument,
-            naive: position.into_naive_position(),
+            naive: position.into_naive(),
         }
     }
 
@@ -129,6 +129,12 @@ where
             positions: HashMap::from([(&self.instrument, self)]),
             children: HashMap::default(),
         }
+    }
+}
+
+impl<'a, T: PositionNum> IntoNaivePosition<T> for &'a Position<T> {
+    fn into_naive(self) -> NaivePosition<T> {
+        self.naive.clone()
     }
 }
 
