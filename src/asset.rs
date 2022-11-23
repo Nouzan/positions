@@ -1,4 +1,4 @@
-use alloc::fmt;
+use alloc::{fmt, string::String};
 use arcstr::{literal, ArcStr};
 use core::{hash::Hash, ops::Deref, str::FromStr};
 
