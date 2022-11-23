@@ -181,6 +181,8 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serde() -> anyhow::Result<()> {
+        use alloc::{vec, vec::Vec};
+
         let value = serde_json::json!(["usdt", "BTC"]);
         let assets: Vec<Asset> = serde_json::from_value(value)?;
         assert_eq!(assets, [Asset::usdt(), Asset::btc()]);
