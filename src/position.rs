@@ -278,6 +278,17 @@ where
     }
 }
 
+impl<T> PartialEq for SingleValue<T>
+where
+    T: PositionNum,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.positions == other.positions
+    }
+}
+
+impl<T> Eq for SingleValue<T> where T: PositionNum {}
+
 /// A table of positions.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -394,6 +405,17 @@ where
         }
     }
 }
+
+impl<T> PartialEq for Positions<T>
+where
+    T: PositionNum,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.values == other.values
+    }
+}
+
+impl<T> Eq for Positions<T> where T: PositionNum {}
 
 impl<T> AddAssign<&Self> for Positions<T>
 where
