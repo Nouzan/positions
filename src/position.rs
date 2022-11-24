@@ -82,6 +82,14 @@ where
         }
     }
 
+    /// Calculate the notional value of the position.
+    /// Note that the notional value of a short position will be negative.
+    pub fn notional_value(&self) -> T {
+        let mut value = self.naive.price.clone();
+        value *= &self.naive.size;
+        value
+    }
+
     /// Merge with the other position.
     /// After merging, the `other` will be the default ("zero") position.
     /// # Warning
