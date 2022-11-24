@@ -3,6 +3,7 @@ use crate::{
     PositionNum, Reversed,
 };
 use alloc::fmt;
+use arcstr::ArcStr;
 use core::ops::{AddAssign, Neg, SubAssign};
 
 #[cfg(feature = "serde")]
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Position<T> {
     instrument: Instrument,
+    #[cfg_attr(feature = "serde", serde(flatten))]
     naive: NaivePosition<T>,
 }
 
@@ -212,7 +214,7 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 struct SingleValue<T> {
     value: T,
-    positions: HashMap<Instrument, Position<T>>,
+    positions: HashMap<ArcStr, Position<T>>,
 }
 
 impl<T> Default for SingleValue<T>
@@ -232,11 +234,12 @@ where
     T: PositionNum,
 {
     fn insert(&mut self, position: Position<T>) {
-        if let Some(p) = self.positions.get_mut(&position.instrument) {
+        if let Some(p) = self.positions.get_mut(position.instrument.symbol()) {
             debug_assert_eq!(p.instrument, position.instrument);
             p.naive += position.naive;
         } else {
-            self.positions.insert(position.instrument.clone(), position);
+            self.positions
+                .insert(position.instrument.symbol.clone(), position);
         }
     }
 
@@ -301,7 +304,7 @@ where
                         PositionTree {
                             asset,
                             value: sv.value.clone(),
-                            positions: sv.positions.iter().collect(),
+                            positions: sv.positions.values().map(|p| (p.instrument(), p)).collect(),
                             children: HashMap::default(),
                         },
                     ))
@@ -312,7 +315,7 @@ where
             PositionTree {
                 asset: root,
                 value: sv.value.clone(),
-                positions: sv.positions.iter().collect(),
+                positions: sv.positions.values().map(|p| (p.instrument(), p)).collect(),
                 children,
             }
         } else {
@@ -355,7 +358,7 @@ where
         self.values
             .get(instrument.quote())?
             .positions
-            .get(instrument)
+            .get(&instrument.symbol)
     }
 
     /// Get the reference of the value of the given asset.
@@ -368,7 +371,7 @@ where
         self.values
             .get_mut(instrument.quote())?
             .positions
-            .get_mut(instrument)
+            .get_mut(&instrument.symbol)
     }
 
     /// Get the mutable reference of the value of the given asset.
@@ -477,7 +480,7 @@ where
 {
     fn from(p: Position<T>) -> Self {
         let asset = p.instrument.quote().clone();
-        let inst = p.instrument.clone();
+        let inst = p.instrument.symbol.clone();
         let sv = SingleValue {
             value: T::zero(),
             positions: HashMap::from([(inst, p)]),
@@ -639,5 +642,47 @@ mod tests {
         #[cfg(feature = "std")]
         println!("{ans}");
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_single_value() -> anyhow::Result<()> {
+        use rust_decimal_macros::dec;
+
+        let inst = Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc());
+        let sv = SingleValue {
+            value: dec!(1.2),
+            positions: HashMap::from([(
+                inst.symbol.clone(),
+                inst.into_position((dec!(1.4), dec!(2))),
+            )]),
+        };
+        let s = serde_json::to_string(&sv)?;
+        #[cfg(feature = "std")]
+        println!("{s}");
+        assert!(!s.is_empty());
+        Ok(())
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_positions() -> anyhow::Result<()> {
+        use rust_decimal_macros::dec;
+        let inst = Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc());
+        let sv = SingleValue {
+            value: dec!(1.2),
+            positions: HashMap::from([(
+                inst.symbol.clone(),
+                inst.clone().into_position((dec!(1.4), dec!(2))),
+            )]),
+        };
+        let positoins = Positions {
+            values: HashMap::from([(inst.quote().clone(), sv)]),
+        };
+        let s = serde_json::to_string(&positoins)?;
+        #[cfg(feature = "std")]
+        println!("{s}");
+        assert!(!s.is_empty());
+        Ok(())
     }
 }

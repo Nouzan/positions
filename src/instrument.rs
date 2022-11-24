@@ -1,7 +1,7 @@
 use alloc::fmt;
 use arcstr::ArcStr;
 
-use crate::{asset::Asset, IntoNaivePosition, Position, PositionNum, Positions};
+use crate::{asset::Asset, IntoNaivePosition, Position, PositionNum};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct Instrument {
     prefer_reversed: bool,
     derivative: bool,
-    symbol: ArcStr,
+    pub(crate) symbol: ArcStr,
     base: Asset,
     quote: Asset,
 }
@@ -91,16 +91,6 @@ impl Instrument {
         P: IntoNaivePosition<T>,
     {
         Position::new(self, position)
-    }
-
-    /// Create a [`Positions`] with the given position of this instrument.
-    #[inline]
-    pub fn into_positions<T, P>(self, position: P) -> Positions<T>
-    where
-        T: PositionNum,
-        P: IntoNaivePosition<T>,
-    {
-        self.into_position(position).into()
     }
 }
 
