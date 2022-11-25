@@ -249,6 +249,18 @@ impl<T> SingleValue<T> {
     pub fn iter(&self) -> impl Iterator<Item = (&str, &Position<T>)> {
         self.positions.iter().map(|(k, v)| (k.as_str(), v))
     }
+
+    /// Get the number of [`Position`]s.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.positions.len()
+    }
+
+    /// Is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.positions.is_empty()
+    }
 }
 
 impl<T> IntoIterator for SingleValue<T> {
@@ -334,6 +346,18 @@ impl<T> Positions<T> {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = (&Asset, &SingleValue<T>)> {
         self.values.iter()
+    }
+
+    /// Get the number of [`SingleValue`]s.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// Is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
     }
 }
 
