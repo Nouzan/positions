@@ -245,8 +245,9 @@ impl<T> SingleValue<T> {
     }
 
     /// Create an iterator of the positions.
-    pub fn iter(&self) -> impl Iterator<Item = &Position<T>> {
-        self.positions.values()
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &Position<T>)> {
+        self.positions.iter().map(|(k, v)| (k.as_str(), v))
     }
 }
 
