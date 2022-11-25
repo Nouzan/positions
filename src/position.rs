@@ -218,9 +218,10 @@ where
     }
 }
 
+/// Single Value Positions.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-struct SingleValue<T> {
+pub struct SingleValue<T> {
     value: T,
     positions: HashMap<ArcStr, Position<T>>,
 }
@@ -234,6 +235,29 @@ where
             value: T::zero(),
             positions: HashMap::default(),
         }
+    }
+}
+
+impl<T> SingleValue<T> {
+    /// Get `value`.
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+
+    /// Create an iterator of the positions.
+    pub fn iter(&self) -> impl Iterator<Item = &Position<T>> {
+        self.positions.values()
+    }
+}
+
+impl<T> IntoIterator for SingleValue<T> {
+    type Item = (ArcStr, Position<T>);
+
+    type IntoIter = <HashMap<ArcStr, Position<T>> as IntoIterator>::IntoIter;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.positions.into_iter()
     }
 }
 
@@ -301,6 +325,14 @@ impl<T> Default for Positions<T> {
         Self {
             values: Default::default(),
         }
+    }
+}
+
+impl<T> Positions<T> {
+    /// Create an iterator of [`SingleValue`]s.
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (&Asset, &SingleValue<T>)> {
+        self.values.iter()
     }
 }
 
@@ -403,6 +435,17 @@ where
         for sv in self.values.values_mut() {
             sv.concentrate();
         }
+    }
+}
+
+impl<T> IntoIterator for Positions<T> {
+    type Item = (Asset, SingleValue<T>);
+
+    type IntoIter = <HashMap<Asset, SingleValue<T>> as IntoIterator>::IntoIter;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.values.into_iter()
     }
 }
 
