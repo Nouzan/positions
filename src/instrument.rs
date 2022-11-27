@@ -1,4 +1,4 @@
-use core::borrow::Borrow;
+use core::{borrow::Borrow, hash::Hash};
 
 use alloc::fmt;
 use arcstr::ArcStr;
@@ -9,7 +9,7 @@ use crate::{asset::Asset, IntoNaivePosition, Position, PositionNum};
 use serde::{Deserialize, Serialize};
 
 /// Instrument.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
     prefer_reversed: bool,
@@ -111,6 +111,24 @@ impl From<(Asset, Asset)> for Instrument {
 impl fmt::Display for Instrument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.symbol())
+    }
+}
+
+impl PartialEq for Instrument {
+    fn eq(&self, other: &Self) -> bool {
+        self.prefer_reversed == other.prefer_reversed
+            && self.derivative == other.derivative
+            && self.symbol == other.symbol
+            && self.base == other.base
+            && self.quote == other.quote
+    }
+}
+
+impl Eq for Instrument {}
+
+impl Hash for Instrument {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.symbol.hash(state);
     }
 }
 
