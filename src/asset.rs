@@ -1,6 +1,6 @@
 use alloc::{fmt, string::String};
 use arcstr::{literal, ArcStr};
-use core::{hash::Hash, ops::Deref, str::FromStr};
+use core::{borrow::Borrow, hash::Hash, ops::Deref, str::FromStr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -93,6 +93,18 @@ impl Deref for Asset {
 impl AsRef<str> for Asset {
     fn as_ref(&self) -> &str {
         self.inner.as_str()
+    }
+}
+
+impl Borrow<str> for Asset {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl<'a> Borrow<str> for &'a Asset {
+    fn borrow(&self) -> &str {
+        self.as_str()
     }
 }
 

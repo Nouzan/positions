@@ -119,3 +119,9 @@ impl Borrow<str> for Instrument {
         self.symbol()
     }
 }
+
+impl<'a> Borrow<str> for &'a Instrument {
+    fn borrow(&self) -> &str {
+        self.symbol()
+    }
+}
