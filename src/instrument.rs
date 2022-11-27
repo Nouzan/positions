@@ -1,3 +1,5 @@
+use core::borrow::Borrow;
+
 use alloc::fmt;
 use arcstr::ArcStr;
 
@@ -109,5 +111,11 @@ impl From<(Asset, Asset)> for Instrument {
 impl fmt::Display for Instrument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.symbol())
+    }
+}
+
+impl Borrow<str> for Instrument {
+    fn borrow(&self) -> &str {
+        self.symbol()
     }
 }
