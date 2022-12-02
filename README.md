@@ -44,12 +44,12 @@ fn main() {
     let mut p = inst.position((dec!(16000), dec!(1.5)));
 
     // Later, we add 1.5 BTC to the position at 15000 USDT/BTC.
-    p.merge(&mut inst.position((dec!(15000), dec!(1.5))));
+    p += (dec!(15000), dec!(1.5));
     // The total position now should be holding 3.0 BTC at the cost of 1550 USDT/BTC.
     assert_eq!(p, inst.position((dec!(15500), dec!(3.0))));
 
     // Finally, we close all the position at 15700 USDT/BTC,
-    p.merge(&mut inst.position((dec!(15700), -dec!(3.0))));
+    p += (dec!(15700), -dec!(3.0));
     // which make us a profit of 600 USDT.
     assert_eq!(*p.value(), dec!(600));
 
@@ -63,9 +63,9 @@ fn main() {
 
     // The same calculation should also work for the short positions.
     let mut p = inst.position((dec!(16000), dec!(-1.5)));
-    p.merge(&mut inst.position((dec!(15000), dec!(-1.5))));
+    p += (dec!(15000), dec!(-1.5));
     assert_eq!(p, inst.position((dec!(15500), dec!(-3.0))));
-    p.merge(&mut inst.position((dec!(15700), dec!(3.0))));
+    p += (dec!(15700), dec!(3.0));
     assert_eq!(p.take(), dec!(-600));
     assert!(p.is_zero());
 }
@@ -83,12 +83,12 @@ fn main() {
     let mut p = inst.position((dec!(16000), dec!(1.5)));
 
     // Later, we add 1.5 BTC to the position at 15000 USDT/BTC.
-    p.merge(&mut inst.position((dec!(15000), dec!(1.5))));
+    p += (dec!(15000), dec!(1.5));
     // The total position now should be holding 3.0 BTC at the cost of 1550 USDT/BTC.
     assert_eq!(p, inst.position((dec!(15500), dec!(3.0))));
 
     // Finally, we close all the position at 15700 USDT/BTC,
-    p.merge(&mut inst.position((dec!(15700), -dec!(3.0))));
+    p += (dec!(15700), -dec!(3.0));
     // which make us a profit of 600 USDT.
     assert_eq!(*p.value(), dec!(600));
 
@@ -102,9 +102,9 @@ fn main() {
 
     // The same calculation should also work for the short positions.
     let mut p = inst.position((dec!(16000), dec!(-1.5)));
-    p.merge(&mut inst.position((dec!(15000), dec!(-1.5))));
+    p += (dec!(15000), dec!(-1.5));
     assert_eq!(p, inst.position((dec!(15500), dec!(-3.0))));
-    p.merge(&mut inst.position((dec!(15700), dec!(3.0))));
+    p += (dec!(15700), dec!(3.0));
     assert_eq!(p.take(), dec!(-600));
     assert!(p.is_zero());
 }
