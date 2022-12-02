@@ -35,7 +35,7 @@ jobs:
               - --lib --no-default-features
               - --all-targets --no-default-features --features alloc
               - --all-targets --no-default-features --features std
-              - --lib --no-default-features --features serde
+              - --no-default-features --features serde
               - --all-targets --no-default-features --features serde,alloc
 
         steps:

@@ -1,4 +1,4 @@
-use core::{borrow::Borrow, hash::Hash, str::FromStr};
+use core::{borrow::Borrow, hash::Hash, ops::Deref, str::FromStr};
 
 use crate::{
     asset::{Asset, ParseAssetError},
@@ -17,18 +17,17 @@ use alloc::{
 use serde::{Deserialize, Serialize};
 
 /// Instrument.
-#[derive(Debug, Clone, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
     prefer_reversed: bool,
-    derivative: bool,
-    pub(crate) symbol: Str,
+    symbol: Symbol,
     base: Asset,
     quote: Asset,
 }
 
 /// Symbol.
-#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "Str", into = "String"))]
 pub struct Symbol {
@@ -72,7 +71,7 @@ impl Symbol {
 
     /// Create a new symbol from [`Str`].
     /// Return `None` if `prefix` is emtpy or contains [`Symbol::SEP`];
-    pub fn from_smol_str(prefix: &Str, symbol: &Str) -> Option<Self> {
+    pub fn from_raw(prefix: &Str, symbol: &Str) -> Option<Self> {
         if prefix.is_empty() || prefix.contains(Self::SEP) {
             return None;
         }
@@ -182,33 +181,48 @@ impl FromStr for Symbol {
 
 impl Instrument {
     /// Create a new instrument.
-    pub fn new(symbol: impl AsRef<str>, base: Asset, quote: Asset) -> Self {
-        Self::from_smol_str(Str::from(symbol), base, quote)
+    pub fn try_new(
+        symbol: impl AsRef<str>,
+        base: &Asset,
+        quote: &Asset,
+    ) -> Result<Self, ParseSymbolError> {
+        Self::try_with_symbol(Symbol::try_from(symbol.as_ref())?, base, quote)
+    }
+
+    /// Create a new spot instrument.
+    pub fn spot(base: &Asset, quote: &Asset) -> Self {
+        Self {
+            prefer_reversed: false,
+            symbol: Symbol::spot(base, quote),
+            base: base.clone(),
+            quote: quote.clone(),
+        }
     }
 
     /// Create a new instrument with the given [`Str`] as symbol.
-    pub fn from_smol_str(symbol: Str, base: Asset, quote: Asset) -> Self {
-        Self {
-            prefer_reversed: false,
-            derivative: true,
-            symbol,
-            base,
-            quote,
+    pub fn try_with_symbol(
+        symbol: Symbol,
+        base: &Asset,
+        quote: &Asset,
+    ) -> Result<Self, ParseSymbolError> {
+        if symbol.is_spot() {
+            let valid_symbol = Symbol::spot(base, quote);
+            if valid_symbol != symbol {
+                return Err(ParseSymbolError::InvalidSpotFormat);
+            }
         }
+        Ok(Self {
+            prefer_reversed: false,
+            symbol,
+            base: base.clone(),
+            quote: quote.clone(),
+        })
     }
 
     /// Whether to mark this instrument as a reversed-prefering.
     /// Default to `false`.
     pub fn prefer_reversed(mut self, reversed: bool) -> Self {
         self.prefer_reversed = reversed;
-        self
-    }
-
-    /// Whether to mark this insturment as a derivative.
-    /// Default to `true` if constructed by [`Instrument::new`],
-    /// and `false` if constructed from [`Asset`] pairs.
-    pub fn derivative(mut self, derivative: bool) -> Self {
-        self.derivative = derivative;
         self
     }
 
@@ -219,14 +233,13 @@ impl Instrument {
     }
 
     /// Is this instrument a derivative.
-    /// Default to `true` if constructed by [`Instrument::new`],
-    /// and `false` if constructed from [`Asset`] pairs.
     pub fn is_derivative(&self) -> bool {
-        self.derivative
+        !self.symbol.is_spot()
     }
 
     /// Get the symbol.
-    pub fn symbol(&self) -> &str {
+    #[inline]
+    pub fn as_symbol(&self) -> &Symbol {
         &self.symbol
     }
 
@@ -253,26 +266,19 @@ impl Instrument {
 
 impl From<(Asset, Asset)> for Instrument {
     fn from((base, quote): (Asset, Asset)) -> Self {
-        Self {
-            prefer_reversed: false,
-            derivative: false,
-            symbol: Str::from(alloc::format!("{base}-{quote}")),
-            base,
-            quote,
-        }
+        Self::spot(&base, &quote)
     }
 }
 
 impl fmt::Display for Instrument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.symbol())
+        write!(f, "{}", self.symbol)
     }
 }
 
 impl PartialEq for Instrument {
     fn eq(&self, other: &Self) -> bool {
         self.prefer_reversed == other.prefer_reversed
-            && self.derivative == other.derivative
             && self.symbol == other.symbol
             && self.base == other.base
             && self.quote == other.quote
@@ -287,15 +293,35 @@ impl Hash for Instrument {
     }
 }
 
-impl Borrow<str> for Instrument {
-    fn borrow(&self) -> &str {
-        self.symbol()
+impl PartialEq<Symbol> for Instrument {
+    fn eq(&self, other: &Symbol) -> bool {
+        self.symbol.eq(other)
     }
 }
 
-impl<'a> Borrow<str> for &'a Instrument {
-    fn borrow(&self) -> &str {
-        self.symbol()
+impl Borrow<Symbol> for Instrument {
+    fn borrow(&self) -> &Symbol {
+        &self.symbol
+    }
+}
+
+impl<'a> Borrow<Symbol> for &'a Instrument {
+    fn borrow(&self) -> &Symbol {
+        &self.symbol
+    }
+}
+
+impl Deref for Instrument {
+    type Target = Symbol;
+
+    fn deref(&self) -> &Self::Target {
+        &self.symbol
+    }
+}
+
+impl AsRef<Symbol> for Instrument {
+    fn as_ref(&self) -> &Symbol {
+        &self.symbol
     }
 }
 

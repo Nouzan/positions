@@ -46,3 +46,7 @@ rust_decimal = "1.26.1"
 rust_decimal_macros = "1.26.1"
 serde_json = "1.0"
 fraction = { version = "0.12.1" }
+
+[[example]]
+name = "arbitrage"
+required-features = ["alloc"]

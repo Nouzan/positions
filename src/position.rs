@@ -1,10 +1,10 @@
 use crate::{
-    instrument::Instrument, tree::PositionTree, Asset, HashMap, IntoNaivePosition, NaivePosition,
-    PositionNum, Reversed,
+    instrument::{Instrument, Symbol},
+    tree::PositionTree,
+    Asset, HashMap, IntoNaivePosition, NaivePosition, PositionNum, Reversed,
 };
 use alloc::fmt;
 use core::ops::{AddAssign, Neg, SubAssign};
-use smol_str::SmolStr as Str;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -223,7 +223,7 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SingleValue<T> {
     value: T,
-    positions: HashMap<Str, Position<T>>,
+    positions: HashMap<Symbol, Position<T>>,
 }
 
 impl<T> Default for SingleValue<T>
@@ -246,8 +246,8 @@ impl<T> SingleValue<T> {
 
     /// Create an iterator of the positions.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (&str, &Position<T>)> {
-        self.positions.iter().map(|(k, v)| (k.as_str(), v))
+    pub fn iter(&self) -> impl Iterator<Item = (&Symbol, &Position<T>)> {
+        self.positions.iter()
     }
 
     /// Get the number of [`Position`]s.
@@ -264,9 +264,9 @@ impl<T> SingleValue<T> {
 }
 
 impl<T> IntoIterator for SingleValue<T> {
-    type Item = (Str, Position<T>);
+    type Item = (Symbol, Position<T>);
 
-    type IntoIter = <HashMap<Str, Position<T>> as IntoIterator>::IntoIter;
+    type IntoIter = <HashMap<Symbol, Position<T>> as IntoIterator>::IntoIter;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -279,12 +279,12 @@ where
     T: PositionNum,
 {
     fn insert(&mut self, position: Position<T>) {
-        if let Some(p) = self.positions.get_mut(position.instrument.symbol()) {
+        if let Some(p) = self.positions.get_mut(position.instrument.as_symbol()) {
             debug_assert_eq!(p.instrument, position.instrument);
             p.naive += position.naive;
         } else {
             self.positions
-                .insert(position.instrument.symbol.clone(), position);
+                .insert(position.instrument.as_symbol().clone(), position);
         }
     }
 
@@ -434,7 +434,7 @@ where
         self.values
             .get(instrument.quote())?
             .positions
-            .get(&instrument.symbol)
+            .get(instrument.as_symbol())
     }
 
     /// Get the reference of the value of the given asset.
@@ -447,7 +447,7 @@ where
         self.values
             .get_mut(instrument.quote())?
             .positions
-            .get_mut(&instrument.symbol)
+            .get_mut(instrument.as_symbol())
     }
 
     /// Get the mutable reference of the value of the given asset.
@@ -578,7 +578,7 @@ where
 {
     fn from(p: Position<T>) -> Self {
         let asset = p.instrument.quote().clone();
-        let inst = p.instrument.symbol.clone();
+        let inst = p.instrument.as_symbol().clone();
         let sv = SingleValue {
             value: T::zero(),
             positions: HashMap::from([(inst, p)]),
@@ -679,10 +679,13 @@ mod tests {
     fn basic_positions() {
         let btc = Asset::btc();
         let usdt = Asset::usdt();
-        let btc_usdt_swap = Instrument::new("BTC-USDT-SWAP", Asset::btc(), Asset::usdt());
-        let btc_usd_swap =
-            Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc()).prefer_reversed(true);
-        let eth_btc_swap = Instrument::new("ETH-BTC-SWAP", Asset::eth(), Asset::btc());
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
         let mut p = Positions::default();
         p += (Decimal::from(-16000), &usdt);
         p += (Decimal::from(1), &btc);
@@ -702,10 +705,13 @@ mod tests {
     fn positions_as_tree() {
         let btc = Asset::btc();
         let usdt = Asset::usdt();
-        let btc_usdt_swap = Instrument::new("BTC-USDT-SWAP", Asset::btc(), Asset::usdt());
-        let btc_usd_swap =
-            Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc()).prefer_reversed(true);
-        let eth_btc_swap = Instrument::new("ETH-BTC-SWAP", Asset::eth(), Asset::btc());
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
         let mut p = Positions::default();
         p += (Decimal::from(-16000), &usdt);
         p += (Decimal::from(1), &btc);
@@ -747,11 +753,11 @@ mod tests {
     fn serde_single_value() -> anyhow::Result<()> {
         use rust_decimal_macros::dec;
 
-        let inst = Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc());
+        let inst = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc()).unwrap();
         let sv = SingleValue {
             value: dec!(1.2),
             positions: HashMap::from([(
-                inst.symbol.clone(),
+                inst.as_symbol().clone(),
                 inst.into_position((dec!(1.4), dec!(2))),
             )]),
         };
@@ -766,11 +772,11 @@ mod tests {
     #[test]
     fn serde_positions() -> anyhow::Result<()> {
         use rust_decimal_macros::dec;
-        let inst = Instrument::new("BTC-USD-SWAP", Asset::usd(), Asset::btc());
+        let inst = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc()).unwrap();
         let sv = SingleValue {
             value: dec!(1.2),
             positions: HashMap::from([(
-                inst.symbol.clone(),
+                inst.as_symbol().clone(),
                 inst.clone().into_position((dec!(1.4), dec!(2))),
             )]),
         };
