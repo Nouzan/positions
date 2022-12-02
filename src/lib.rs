@@ -36,8 +36,8 @@ pub mod legacy;
 /// Prelude.
 #[cfg(feature = "alloc")]
 pub mod prelude {
-    pub use crate::asset::Asset;
-    pub use crate::instrument::Instrument;
+    pub use crate::asset::{Asset, ParseAssetError};
+    pub use crate::instrument::{Instrument, ParseSymbolError, Symbol};
     pub use crate::naive_position::{IntoNaivePosition, ToNaivePosition};
     pub use crate::position::{Position, Positions};
     pub use crate::PositionNum;
@@ -52,28 +52,11 @@ pub mod prelude {
 }
 
 #[cfg(feature = "alloc")]
-pub use prelude::{Asset, HashMap, Instrument, Position, Positions};
+pub use prelude::{
+    Asset, HashMap, Instrument, ParseAssetError, ParseSymbolError, Position, Positions, Symbol,
+};
 
 /// Num trait that is required by position.
 pub trait PositionNum: NumAssignRef + Signed + Clone + PartialOrd {}
 
 impl<T: NumAssignRef + Signed + Clone + PartialOrd> PositionNum for T {}
-
-// /// Type that can be treat as a position.
-// pub trait AsNaivePosition<T>
-// where
-//     T: PositionNum,
-// {
-//     /// Convert to a naive position.
-//     fn as_naive(&self) -> NaivePosition<T>;
-// }
-
-// impl<'a, T, P> AsNaivePosition<T> for &'a P
-// where
-//     T: PositionNum,
-//     P: AsNaivePosition<T>,
-// {
-//     fn as_naive(&self) -> NaivePosition<T> {
-//         AsNaivePosition::<T>::as_naive(*self)
-//     }
-// }
