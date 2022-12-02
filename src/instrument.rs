@@ -1,7 +1,7 @@
 use core::{borrow::Borrow, hash::Hash};
 
 use alloc::fmt;
-use arcstr::ArcStr;
+use smol_str::SmolStr as Str;
 
 use crate::{asset::Asset, IntoNaivePosition, Position, PositionNum};
 
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 pub struct Instrument {
     prefer_reversed: bool,
     derivative: bool,
-    pub(crate) symbol: ArcStr,
+    pub(crate) symbol: Str,
     base: Asset,
     quote: Asset,
 }
@@ -22,17 +22,11 @@ pub struct Instrument {
 impl Instrument {
     /// Create a new instrument.
     pub fn new(symbol: impl AsRef<str>, base: Asset, quote: Asset) -> Self {
-        Self {
-            prefer_reversed: false,
-            derivative: true,
-            symbol: ArcStr::from(symbol.as_ref()),
-            base,
-            quote,
-        }
+        Self::from_smol_str(Str::from(symbol), base, quote)
     }
 
-    /// Create with symbol provided by `ArcStr`.
-    pub fn with_arcstr(symbol: ArcStr, base: Asset, quote: Asset) -> Self {
+    /// Create a new instrument with the given [`Str`] as symbol.
+    pub fn from_smol_str(symbol: Str, base: Asset, quote: Asset) -> Self {
         Self {
             prefer_reversed: false,
             derivative: true,
@@ -101,7 +95,7 @@ impl From<(Asset, Asset)> for Instrument {
         Self {
             prefer_reversed: false,
             derivative: false,
-            symbol: arcstr::format!("{base}-{quote}"),
+            symbol: Str::from(alloc::format!("{base}-{quote}")),
             base,
             quote,
         }

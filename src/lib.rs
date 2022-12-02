@@ -47,6 +47,8 @@ pub mod prelude {
 
     #[cfg(feature = "std")]
     pub use std::collections::HashMap;
+
+    pub use smol_str::SmolStr as Str;
 }
 
 #[cfg(feature = "alloc")]

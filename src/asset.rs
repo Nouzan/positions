@@ -1,6 +1,6 @@
 use alloc::{fmt, string::String};
-use arcstr::{literal, ArcStr};
 use core::{borrow::Borrow, hash::Hash, ops::Deref, str::FromStr};
+use smol_str::SmolStr as Str;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -10,9 +10,9 @@ use crate::{PositionNum, Positions};
 /// Asset.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(from = "ArcStr", into = "ArcStr"))]
+#[cfg_attr(feature = "serde", serde(from = "Str", into = "Str"))]
 pub struct Asset {
-    inner: ArcStr,
+    inner: Str,
 }
 
 impl fmt::Display for Asset {
@@ -21,21 +21,21 @@ impl fmt::Display for Asset {
     }
 }
 
-impl From<Asset> for ArcStr {
-    #[inline]
-    fn from(asset: Asset) -> Self {
-        asset.inner
-    }
-}
+// impl From<Asset> for Str {
+//     #[inline]
+//     fn from(asset: Asset) -> Self {
+//         asset.inner
+//     }
+// }
 
-impl From<ArcStr> for Asset {
-    fn from(value: ArcStr) -> Self {
+impl From<Str> for Asset {
+    fn from(value: Str) -> Self {
         let s = value.to_uppercase();
         if s == value {
             Self { inner: value }
         } else {
             Self {
-                inner: ArcStr::from(s),
+                inner: Str::from(s),
             }
         }
     }
@@ -45,7 +45,7 @@ impl From<String> for Asset {
     #[inline]
     fn from(s: String) -> Self {
         Self {
-            inner: ArcStr::from(s.to_uppercase()),
+            inner: Str::from(s.to_uppercase()),
         }
     }
 }
@@ -54,13 +54,13 @@ impl<'a> From<&'a str> for Asset {
     #[inline]
     fn from(s: &'a str) -> Self {
         Self {
-            inner: ArcStr::from(s.to_uppercase()),
+            inner: Str::from(s.to_uppercase()),
         }
     }
 }
 
-impl<'a> From<&'a ArcStr> for Asset {
-    fn from(value: &'a ArcStr) -> Self {
+impl<'a> From<&'a Str> for Asset {
+    fn from(value: &'a Str) -> Self {
         let s = value.to_uppercase();
         if s == *value {
             Self {
@@ -68,7 +68,7 @@ impl<'a> From<&'a ArcStr> for Asset {
             }
         } else {
             Self {
-                inner: ArcStr::from(s),
+                inner: Str::from(s),
             }
         }
     }
@@ -110,31 +110,43 @@ impl<'a> Borrow<str> for &'a Asset {
 
 impl Asset {
     /// Usdt.
-    pub fn usdt() -> Self {
+    pub const USDT: Self = Self::new_inline("USDT");
+    /// Usd.
+    pub const USD: Self = Self::new_inline("USD");
+    /// Btc.
+    pub const BTC: Self = Self::new_inline("BTC");
+    /// Eth.
+    pub const ETH: Self = Self::new_inline("ETH");
+
+    /// Create a new [`Asset`] from an "inline" str.
+    /// # Panic
+    /// Panics if s.len() > 22.
+    /// # Warning
+    /// Must make sure the asset format is valid.
+    const fn new_inline(s: &str) -> Self {
         Self {
-            inner: literal!("USDT"),
+            inner: Str::new_inline(s),
         }
+    }
+
+    /// Usdt.
+    pub fn usdt() -> Self {
+        Self::USDT
     }
 
     /// Usd.
     pub fn usd() -> Self {
-        Self {
-            inner: literal!("USD"),
-        }
+        Self::USD
     }
 
     /// Btc.
     pub fn btc() -> Self {
-        Self {
-            inner: literal!("BTC"),
-        }
+        Self::BTC
     }
 
     /// Eth.
     pub fn eth() -> Self {
-        Self {
-            inner: literal!("ETH"),
-        }
+        Self::ETH
     }
 
     /// Convert to [`&str`]

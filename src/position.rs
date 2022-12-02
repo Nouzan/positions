@@ -3,8 +3,8 @@ use crate::{
     PositionNum, Reversed,
 };
 use alloc::fmt;
-use arcstr::ArcStr;
 use core::ops::{AddAssign, Neg, SubAssign};
+use smol_str::SmolStr as Str;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -223,7 +223,7 @@ where
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SingleValue<T> {
     value: T,
-    positions: HashMap<ArcStr, Position<T>>,
+    positions: HashMap<Str, Position<T>>,
 }
 
 impl<T> Default for SingleValue<T>
@@ -264,9 +264,9 @@ impl<T> SingleValue<T> {
 }
 
 impl<T> IntoIterator for SingleValue<T> {
-    type Item = (ArcStr, Position<T>);
+    type Item = (Str, Position<T>);
 
-    type IntoIter = <HashMap<ArcStr, Position<T>> as IntoIterator>::IntoIter;
+    type IntoIter = <HashMap<Str, Position<T>> as IntoIterator>::IntoIter;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {

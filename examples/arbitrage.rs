@@ -1,11 +1,10 @@
-use arcstr::ArcStr;
 use fraction::{BigInt, GenericDecimal};
 use positions::prelude::*;
 
 type Decimal = GenericDecimal<BigInt, usize>;
 
 const FEE_RATE: f64 = -0.001;
-const BTC_USD_SWAP: ArcStr = arcstr::literal!("BTC-USD-SWAP");
+const BTC_USD_SWAP: Str = Str::new_inline("BTC-USD-SWAP");
 
 fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
     let mut p = Asset::usdt().to_positions(-at.clone() * size.clone());
@@ -19,7 +18,7 @@ fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
 }
 
 fn buy_swap(size: Decimal, at: Decimal) -> Positions<Decimal> {
-    let p = Instrument::with_arcstr(BTC_USD_SWAP, Asset::usd(), Asset::btc())
+    let p = Instrument::from_smol_str(BTC_USD_SWAP, Asset::usd(), Asset::btc())
         .prefer_reversed(true)
         .into_position((at, size).reversed());
     let fee =
@@ -39,7 +38,7 @@ fn main() -> anyhow::Result<()> {
     let usdt = Asset::usdt();
     let btc_usdt = Instrument::from((btc.clone(), usdt.clone()));
     let btc_usd_swap =
-        Instrument::with_arcstr(BTC_USD_SWAP, Asset::usd(), Asset::btc()).prefer_reversed(true);
+        Instrument::from_smol_str(BTC_USD_SWAP, Asset::usd(), Asset::btc()).prefer_reversed(true);
     let mut prices = HashMap::from([
         (btc_usdt.clone(), Decimal::from(16000.00)),
         (btc_usd_swap.clone(), Decimal::from(16003.00)),
