@@ -50,3 +50,11 @@ fraction = { version = "0.12.1" }
 [[example]]
 name = "arbitrage"
 required-features = ["alloc"]
+
+[[example]]
+name = "basic"
+required-features = ["alloc"]
+
+[[example]]
+name = "coin_margin"
+required-features = ["alloc"]

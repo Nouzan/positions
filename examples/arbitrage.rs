@@ -7,7 +7,7 @@ const FEE_RATE: f64 = -0.001;
 const BTC_USD_SWAP: &str = "SWAP:BTC-USD-SWAP";
 
 fn buy_btc(size: Decimal, at: Decimal) -> Positions<Decimal> {
-    let mut p = Asset::usdt().to_positions(-at.clone() * size.clone());
+    let mut p = Asset::usdt().value(-at.clone() * size.clone());
     p += (size.clone(), &Asset::btc());
     if size.is_sign_positive() {
         p += (size.abs() * Decimal::from(FEE_RATE), &Asset::btc());
@@ -21,7 +21,7 @@ fn buy_swap(size: Decimal, at: Decimal) -> Positions<Decimal> {
     let p = Instrument::try_new(BTC_USD_SWAP, &Asset::usd(), &Asset::btc())
         .unwrap()
         .prefer_reversed(true)
-        .into_position((at, size).reversed());
+        .position((at, size).reversed());
     let fee =
         (p.as_naive().price.clone() * p.as_naive().size.clone()).abs() * Decimal::from(FEE_RATE);
     let quote = p.instrument().quote().clone();
@@ -31,7 +31,7 @@ fn buy_swap(size: Decimal, at: Decimal) -> Positions<Decimal> {
 }
 
 fn interest(value: Decimal, rate: Decimal) -> Positions<Decimal> {
-    Asset::btc().to_positions(value * rate)
+    Asset::btc().value(value * rate)
 }
 
 fn main() -> anyhow::Result<()> {

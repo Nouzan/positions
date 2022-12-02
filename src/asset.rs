@@ -156,7 +156,7 @@ impl Asset {
     }
 
     /// Create a [`Positions`] with only value of this asset.
-    pub fn to_positions<T>(&self, value: T) -> Positions<T>
+    pub fn value<T>(&self, value: T) -> Positions<T>
     where
         T: PositionNum,
     {

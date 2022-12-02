@@ -255,12 +255,12 @@ impl Instrument {
 
     /// Create a [`Position`] with the given position of this instrument.
     #[inline]
-    pub fn into_position<T, P>(self, position: P) -> Position<T>
+    pub fn position<T, P>(&self, position: P) -> Position<T>
     where
         T: PositionNum,
         P: IntoNaivePosition<T>,
     {
-        Position::new(self, position)
+        Position::new(self.clone(), position)
     }
 }
 

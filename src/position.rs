@@ -758,7 +758,7 @@ mod tests {
             value: dec!(1.2),
             positions: HashMap::from([(
                 inst.as_symbol().clone(),
-                inst.into_position((dec!(1.4), dec!(2))),
+                inst.position((dec!(1.4), dec!(2))),
             )]),
         };
         let s = serde_json::to_string(&sv)?;
@@ -777,7 +777,7 @@ mod tests {
             value: dec!(1.2),
             positions: HashMap::from([(
                 inst.as_symbol().clone(),
-                inst.clone().into_position((dec!(1.4), dec!(2))),
+                inst.position((dec!(1.4), dec!(2))),
             )]),
         };
         let positoins = Positions {

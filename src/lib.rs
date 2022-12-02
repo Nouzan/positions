@@ -38,7 +38,7 @@ pub mod legacy;
 pub mod prelude {
     pub use crate::asset::{Asset, ParseAssetError};
     pub use crate::instrument::{Instrument, ParseSymbolError, Symbol};
-    pub use crate::naive_position::{IntoNaivePosition, ToNaivePosition};
+    pub use crate::naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosition};
     pub use crate::position::{Position, Positions};
     pub use crate::PositionNum;
 
