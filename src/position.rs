@@ -4,7 +4,7 @@ use crate::{
     Asset, HashMap, IntoNaivePosition, NaivePosition, PositionNum, Reversed,
 };
 use alloc::fmt;
-use core::ops::{AddAssign, Neg, SubAssign};
+use core::ops::{Add, AddAssign, Deref, Neg, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -48,9 +48,17 @@ where
     }
 
     /// Return the value when the position is closed at the given price.
+    /// # Warning
+    /// This method will respect the reversed-preference,
+    /// so if you want to close a position of a "reversed instrument",
+    /// you should provide the price with "reversed form".
     pub fn closed(&self, price: &T) -> T {
         let mut p = self.naive.clone();
-        p -= (price.clone(), p.size.clone());
+        if self.instrument.is_prefer_reversed() {
+            p -= Reversed((price.clone(), self.size()));
+        } else {
+            p -= (price.clone(), self.size());
+        }
         p.value
     }
 
@@ -218,6 +226,12 @@ where
     }
 }
 
+impl<T> AsRef<Position<T>> for Position<T> {
+    fn as_ref(&self) -> &Position<T> {
+        self
+    }
+}
+
 /// Single Value Positions.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -365,6 +379,11 @@ impl<T> Positions<T>
 where
     T: PositionNum,
 {
+    /// Convert to a positions expression.
+    pub fn as_expr(&self) -> Expr<'_, T> {
+        Expr::new(self)
+    }
+
     /// Convert to a position tree, using the given asset as root.
     pub fn as_tree<'a>(&'a self, root: &'a Asset) -> PositionTree<'a, T> {
         let children = self
@@ -509,6 +528,18 @@ where
     }
 }
 
+impl<T> Add for Positions<T>
+where
+    T: PositionNum,
+{
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
 impl<T> AddAssign<Position<T>> for Positions<T>
 where
     T: PositionNum,
@@ -624,6 +655,113 @@ where
     }
 }
 
+/// Positions Expression.
+#[derive(Debug)]
+pub struct Expr<'a, T>(&'a Positions<T>);
+
+impl<'a, T> Clone for Expr<'a, T> {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
+impl<'a, T> Copy for Expr<'a, T> {}
+
+impl<'a, T> Expr<'a, T> {
+    /// Create a [`Expr`] from a [`Positions`].
+    #[inline]
+    pub fn new(positions: &'a Positions<T>) -> Self {
+        Self(positions)
+    }
+}
+
+impl<'a, T> Deref for Expr<'a, T> {
+    type Target = Positions<T>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+impl<'a, T: PositionNum> Expr<'a, T> {
+    /// Get the reference instruments.
+    pub fn instruments<'b>(&'b self, root: &'b Asset) -> impl Iterator<Item = Instrument> + 'b {
+        self.0.values.iter().flat_map(move |(asset, sv)| {
+            let strong = if asset == root {
+                None
+            } else {
+                Some(Instrument::spot(asset, root))
+            };
+            sv.positions
+                .values()
+                .map(|p| p.instrument.clone())
+                .chain(strong)
+        })
+    }
+
+    /// Evaluate the expression with the given prices.
+    /// Return [`None`] if there are missing prices.
+    pub fn eval(&self, root: &Asset, prices: &HashMap<Symbol, T>) -> Option<T> {
+        self.eval_with(root, |p| {
+            Some(p.closed(prices.get(p.instrument().as_symbol())?))
+        })
+    }
+
+    /// Evaluate the expression with the value returned by the given function.
+    /// Return [`None`] if there is something wrong.
+    pub fn eval_with<F>(&self, root: &Asset, mut eval: F) -> Option<T>
+    where
+        F: FnMut(&Position<T>) -> Option<T>,
+    {
+        self.0
+            .values
+            .iter()
+            .map(move |(asset, sv)| {
+                let weak = sv
+                    .positions
+                    .values()
+                    .map(&mut eval)
+                    .try_fold(T::zero(), |acc, x| Some(acc + x?));
+                let value = weak.map(|v| v + sv.value.clone());
+                if asset == root {
+                    value
+                } else {
+                    let p = Instrument::spot(asset, root).position((T::zero(), value?));
+                    Some((eval)(&p)?)
+                }
+            })
+            .try_fold(T::zero(), |acc, x| Some(acc + x?))
+    }
+}
+
+impl<'a, T: PositionNum + fmt::Display> fmt::Display for Expr<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.is_empty() {
+            return write!(f, "0");
+        }
+        for (idx, (asset, sv)) in self.0.values.iter().enumerate() {
+            let mut value = sv.value().clone();
+            let first_sv = idx == 0;
+            let no_position = sv.is_empty();
+            for (idx, p) in sv.positions.values().enumerate() {
+                if !(first_sv && idx == 0) {
+                    write!(f, " + ")?;
+                }
+                value += p.value();
+                let naive = p.as_naive();
+                super::tree::write_position(f, &naive.price, &naive.size, p.instrument())?;
+            }
+            if first_sv && no_position {
+                write!(f, "{} {asset}", value)?;
+            } else {
+                let sign = if value.is_negative() { " - " } else { " + " };
+                write!(f, "{sign}{} {asset}", value.abs())?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -728,10 +866,7 @@ mod tests {
         println!("{tree}");
         let prices = HashMap::from([
             (eth_btc_swap.clone(), Decimal::from(0.059)),
-            (
-                btc_usd_swap.clone(),
-                Decimal::from(1) / Decimal::from(17000),
-            ),
+            (btc_usd_swap.clone(), Decimal::from(17000)),
             (btc_usdt_swap.clone(), Decimal::from(17002)),
             (
                 Instrument::from((btc.clone(), usdt.clone())),
@@ -748,6 +883,97 @@ mod tests {
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
     }
 
+    #[test]
+    fn instruments_of_expr() {
+        #[cfg(not(feature = "std"))]
+        use alloc::vec::Vec;
+
+        let btc = Asset::btc();
+        let usdt = Asset::usdt();
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
+        let mut p = Positions::default();
+        p += (Decimal::from(-16000), &usdt);
+        p += (Decimal::from(1), &btc);
+        p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        p += (
+            Decimal::from(16001),
+            Decimal::from(-1.5),
+            Decimal::from(-2.7),
+            &btc_usdt_swap,
+        );
+        let insts = p.as_expr().instruments(&Asset::ETH).collect::<Vec<_>>();
+        let usdt_eth = Instrument::spot(&Asset::USDT, &Asset::ETH);
+        let btc_eth = Instrument::spot(&Asset::BTC, &Asset::ETH);
+        assert_eq!(insts.len(), 5);
+        for inst in [
+            &btc_usd_swap,
+            &btc_usdt_swap,
+            &eth_btc_swap,
+            &usdt_eth,
+            &btc_eth,
+        ] {
+            assert!(insts.contains(inst));
+        }
+    }
+
+    #[test]
+    fn eval_expr() {
+        let btc = Asset::btc();
+        let usdt = Asset::usdt();
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
+        let mut p = Positions::default();
+        #[cfg(feature = "std")]
+        println!("{}", p.as_expr());
+        p += (Decimal::from(-16000), &usdt);
+        #[cfg(feature = "std")]
+        println!("{}", p.as_expr());
+        p += (Decimal::from(1), &btc);
+        #[cfg(feature = "std")]
+        println!("{}", p.as_expr());
+        p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        #[cfg(feature = "std")]
+        println!("{}", p.as_expr());
+        p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        #[cfg(feature = "std")]
+        println!("{}", p.as_expr());
+        p += (
+            Decimal::from(16001),
+            Decimal::from(-1.5),
+            Decimal::from(-2.7),
+            &btc_usdt_swap,
+        );
+        let expr = p.as_expr();
+        #[cfg(feature = "std")]
+        println!("{}", expr);
+        let prices = HashMap::from([
+            (eth_btc_swap.as_symbol().clone(), Decimal::from(0.059)),
+            (btc_usd_swap.as_symbol().clone(), Decimal::from(17000)),
+            (btc_usdt_swap.as_symbol().clone(), Decimal::from(17002)),
+            (Symbol::spot(&btc, &usdt), Decimal::from(17000)),
+        ]);
+        #[cfg(feature = "std")]
+        for inst in expr.instruments(&Asset::USDT) {
+            println!("{inst}");
+        }
+        let ans = expr.eval(&Asset::USDT, &prices).unwrap().set_precision(1);
+        #[cfg(feature = "std")]
+        println!("{ans}");
+        assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
+    }
+
     #[cfg(feature = "serde")]
     #[test]
     fn serde_single_value() -> anyhow::Result<()> {
@@ -758,7 +984,7 @@ mod tests {
             value: dec!(1.2),
             positions: HashMap::from([(
                 inst.as_symbol().clone(),
-                inst.into_position((dec!(1.4), dec!(2))),
+                inst.position((dec!(1.4), dec!(2))),
             )]),
         };
         let s = serde_json::to_string(&sv)?;
@@ -777,7 +1003,7 @@ mod tests {
             value: dec!(1.2),
             positions: HashMap::from([(
                 inst.as_symbol().clone(),
-                inst.clone().into_position((dec!(1.4), dec!(2))),
+                inst.position((dec!(1.4), dec!(2))),
             )]),
         };
         let positoins = Positions {

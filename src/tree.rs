@@ -1,4 +1,4 @@
-use crate::{Asset, HashMap, Instrument, Position, PositionNum, ToNaivePosition};
+use crate::{Asset, HashMap, Instrument, Position, PositionNum};
 use alloc::{boxed::Box, fmt};
 
 /// Position Tree.
@@ -49,28 +49,29 @@ where
     #[allow(clippy::type_complexity)]
     pub fn eval_with<F>(&self, f: F) -> Option<T>
     where
-        F: FnMut(&Instrument, &dyn ToNaivePosition<T>) -> Option<T>,
+        F: FnMut(&Position<T>) -> Option<T>,
     {
-        let mut f: Box<dyn FnMut(&Instrument, &dyn ToNaivePosition<T>) -> Option<T>> = Box::new(f);
+        let mut f: Box<dyn FnMut(&Position<T>) -> Option<T>> = Box::new(f);
         let children = self
             .children
             .iter()
             .map(|(inst, t)| {
                 let value = t.eval_with(&mut f)?;
-                (f)(inst, &(T::zero(), value))
+                let p = inst.position((T::zero(), value));
+                (f)(&p)
             })
             .try_fold(T::zero(), |acc, x| Some(acc + x?))?;
         let mut ans = self
             .positions
-            .iter()
-            .map(|(inst, p)| (f)(inst, p))
+            .values()
+            .map(|p| (f)(*p))
             .try_fold(children, |acc, x| Some(acc + x?))?;
         ans += &self.value;
         Some(ans)
     }
 }
 
-fn write_position<T>(
+pub(super) fn write_position<T>(
     f: &mut fmt::Formatter<'_>,
     price: &T,
     size: &T,
