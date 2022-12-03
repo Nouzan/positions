@@ -665,7 +665,7 @@ impl<'a, T> Deref for Expr<'a, T> {
 
 impl<'a, T: PositionNum> Expr<'a, T> {
     /// Get the reference instruments.
-    pub fn references<'b>(&'b self, root: &'b Asset) -> impl Iterator<Item = Instrument> + 'b {
+    pub fn instruments<'b>(&'b self, root: &'b Asset) -> impl Iterator<Item = Instrument> + 'b {
         self.0.values.iter().flat_map(move |(asset, sv)| {
             let strong = if asset == root {
                 None
@@ -704,6 +704,34 @@ impl<'a, T: PositionNum> Expr<'a, T> {
                 }
             })
             .try_fold(T::zero(), |acc, x| Some(acc + x?))
+    }
+}
+
+impl<'a, T: PositionNum + fmt::Display> fmt::Display for Expr<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.is_empty() {
+            return write!(f, "0");
+        }
+        for (idx, (asset, sv)) in self.0.values.iter().enumerate() {
+            let mut value = sv.value().clone();
+            let first_sv = idx == 0;
+            let no_position = sv.is_empty();
+            for (idx, p) in sv.positions.values().enumerate() {
+                if !(first_sv && idx == 0) {
+                    write!(f, " + ")?;
+                }
+                value += p.value();
+                let naive = p.as_naive();
+                super::tree::write_position(f, &naive.price, &naive.size, p.instrument())?;
+            }
+            if first_sv && no_position {
+                write!(f, "{} {asset}", value)?;
+            } else {
+                let sign = if value.is_negative() { " - " } else { " + " };
+                write!(f, "{sign}{} {asset}", value.abs())?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -831,9 +859,11 @@ mod tests {
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
     }
 
-    #[cfg(feature = "std")]
     #[test]
-    fn positions_as_expr() {
+    fn instruments_of_expr() {
+        #[cfg(not(feature = "std"))]
+        use alloc::vec::Vec;
+
         let btc = Asset::btc();
         let usdt = Asset::usdt();
         let btc_usdt_swap =
@@ -854,9 +884,51 @@ mod tests {
             Decimal::from(-2.7),
             &btc_usdt_swap,
         );
+        let insts = p.as_expr().instruments(&Asset::ETH).collect::<Vec<_>>();
+        let usdt_eth = Instrument::spot(&Asset::USDT, &Asset::ETH);
+        let btc_eth = Instrument::spot(&Asset::BTC, &Asset::ETH);
+        assert_eq!(insts.len(), 5);
+        for inst in [
+            &btc_usd_swap,
+            &btc_usdt_swap,
+            &eth_btc_swap,
+            &usdt_eth,
+            &btc_eth,
+        ] {
+            assert!(insts.contains(inst));
+        }
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn eval_expr() {
+        let btc = Asset::btc();
+        let usdt = Asset::usdt();
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
+        let mut p = Positions::default();
+        println!("{}", p.as_expr());
+        p += (Decimal::from(-16000), &usdt);
+        println!("{}", p.as_expr());
+        p += (Decimal::from(1), &btc);
+        println!("{}", p.as_expr());
+        p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        println!("{}", p.as_expr());
+        p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        println!("{}", p.as_expr());
+        p += (
+            Decimal::from(16001),
+            Decimal::from(-1.5),
+            Decimal::from(-2.7),
+            &btc_usdt_swap,
+        );
         let expr = p.as_expr();
-        #[cfg(feature = "std")]
-        println!("{}", *expr);
+        println!("{}", expr);
         let prices = HashMap::from([
             (eth_btc_swap.clone(), Decimal::from(0.059)),
             (
@@ -869,8 +941,7 @@ mod tests {
                 Decimal::from(17000),
             ),
         ]);
-        #[cfg(feature = "std")]
-        for inst in expr.references(&Asset::USDT) {
+        for inst in expr.instruments(&Asset::USDT) {
             println!("{inst}");
         }
         let ans = expr
@@ -880,7 +951,6 @@ mod tests {
             })
             .unwrap()
             .set_precision(1);
-        #[cfg(feature = "std")]
         println!("{ans}");
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
     }

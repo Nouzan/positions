@@ -71,7 +71,7 @@ where
     }
 }
 
-fn write_position<T>(
+pub(super) fn write_position<T>(
     f: &mut fmt::Formatter<'_>,
     price: &T,
     size: &T,
