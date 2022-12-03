@@ -14,7 +14,7 @@ use alloc::string::{String, ToString};
 use serde::{Deserialize, Serialize};
 
 /// Instrument.
-#[derive(Debug, Clone, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
     prefer_reversed: bool,
@@ -42,6 +42,9 @@ impl Instrument {
 
     /// Create a new derivative.
     /// Return [`ParseSymbolError`] if the `prefix` is not valid.
+    /// # Warning
+    /// User must make sure that `inst1.symbol == inst2.symbol`
+    /// only if `inst1.base == inst2.base && inst1.quote == inst2.quote`.
     pub fn derivative(
         prefix: &str,
         symbol: &str,
@@ -71,6 +74,9 @@ impl Instrument {
 
     /// Create a new instrument with the given symbol.
     /// Return [`ParseSymbolError`] if the `symbol` does not match the given `base` or `quote`.
+    /// # Warning
+    /// User must make sure that `inst1.symbol == inst2.symbol`
+    /// only if `inst1.base == inst2.base && inst1.quote == inst2.quote`.
     pub fn try_with_symbol(
         symbol: Symbol,
         base: &Asset,
@@ -155,14 +161,26 @@ impl fmt::Display for Instrument {
 
 impl PartialEq for Instrument {
     fn eq(&self, other: &Self) -> bool {
-        self.prefer_reversed == other.prefer_reversed
-            && self.symbol == other.symbol
-            && self.base == other.base
-            && self.quote == other.quote
+        debug_assert!(
+            self.symbol != other.symbol || self.base == other.base && self.quote == other.quote
+        );
+        self.symbol == other.symbol
     }
 }
 
 impl Eq for Instrument {}
+
+impl PartialOrd for Instrument {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        self.symbol.partial_cmp(&other.symbol)
+    }
+}
+
+impl Ord for Instrument {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.symbol.cmp(&other.symbol)
+    }
+}
 
 impl Hash for Instrument {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
