@@ -39,7 +39,7 @@ pub mod prelude {
     pub use crate::asset::{Asset, ParseAssetError};
     pub use crate::instrument::{Instrument, ParseSymbolError, Symbol};
     pub use crate::naive_position::{IntoNaivePosition, NaivePosition, Reversed, ToNaivePosition};
-    pub use crate::position::{Position, Positions};
+    pub use crate::position::{Expr, Position, Positions};
     pub use crate::PositionNum;
 
     #[cfg(not(feature = "std"))]
@@ -53,7 +53,8 @@ pub mod prelude {
 
 #[cfg(feature = "alloc")]
 pub use prelude::{
-    Asset, HashMap, Instrument, ParseAssetError, ParseSymbolError, Position, Positions, Symbol,
+    Asset, Expr, HashMap, Instrument, ParseAssetError, ParseSymbolError, Position, Positions,
+    Symbol,
 };
 
 /// Num trait that is required by position.
