@@ -4,7 +4,7 @@ use crate::{
     Asset, HashMap, IntoNaivePosition, NaivePosition, PositionNum, Reversed,
 };
 use alloc::fmt;
-use core::ops::{AddAssign, Neg, SubAssign};
+use core::ops::{AddAssign, Deref, Neg, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -218,6 +218,12 @@ where
     }
 }
 
+impl<T> AsRef<Position<T>> for Position<T> {
+    fn as_ref(&self) -> &Position<T> {
+        self
+    }
+}
+
 /// Single Value Positions.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -365,6 +371,11 @@ impl<T> Positions<T>
 where
     T: PositionNum,
 {
+    /// Convert to a positions expression.
+    pub fn as_expr(&self) -> Expr<'_, T> {
+        Expr::new(self)
+    }
+
     /// Convert to a position tree, using the given asset as root.
     pub fn as_tree<'a>(&'a self, root: &'a Asset) -> PositionTree<'a, T> {
         let children = self
@@ -624,6 +635,78 @@ where
     }
 }
 
+/// Positions Expression.
+#[derive(Debug)]
+pub struct Expr<'a, T>(&'a Positions<T>);
+
+impl<'a, T> Clone for Expr<'a, T> {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
+impl<'a, T> Copy for Expr<'a, T> {}
+
+impl<'a, T> Expr<'a, T> {
+    /// Create a [`Expr`] from a [`Positions`].
+    #[inline]
+    pub fn new(positions: &'a Positions<T>) -> Self {
+        Self(positions)
+    }
+}
+
+impl<'a, T> Deref for Expr<'a, T> {
+    type Target = Positions<T>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+impl<'a, T: PositionNum> Expr<'a, T> {
+    /// Get the reference instruments.
+    pub fn references<'b>(&'b self, root: &'b Asset) -> impl Iterator<Item = Instrument> + 'b {
+        self.0.values.iter().flat_map(move |(asset, sv)| {
+            let strong = if asset == root {
+                None
+            } else {
+                Some(Instrument::spot(asset, root))
+            };
+            sv.positions
+                .values()
+                .map(|p| p.instrument.clone())
+                .chain(strong)
+        })
+    }
+
+    /// Evaluate the expression with the value returned by the given function.
+    /// Return [`None`] if there is something wrong.
+    #[allow(clippy::type_complexity)]
+    pub fn eval_with<F>(&self, root: &Asset, mut eval: F) -> Option<T>
+    where
+        F: FnMut(&Position<T>) -> Option<T>,
+    {
+        self.0
+            .values
+            .iter()
+            .map(move |(asset, sv)| {
+                let weak = sv
+                    .positions
+                    .values()
+                    .map(&mut eval)
+                    .try_fold(T::zero(), |acc, x| Some(acc + x?));
+                let value = weak.map(|v| v + sv.value.clone());
+                if asset == root {
+                    value
+                } else {
+                    let p = Instrument::spot(asset, root).position((T::zero(), value?));
+                    Some((eval)(&p)?)
+                }
+            })
+            .try_fold(T::zero(), |acc, x| Some(acc + x?))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -743,6 +826,60 @@ mod tests {
             println!("{inst}");
         }
         let ans = tree.eval(&prices).unwrap().set_precision(1);
+        #[cfg(feature = "std")]
+        println!("{ans}");
+        assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn positions_as_expr() {
+        let btc = Asset::btc();
+        let usdt = Asset::usdt();
+        let btc_usdt_swap =
+            Instrument::try_new("SWAP:BTC-USDT-SWAP", &Asset::btc(), &Asset::usdt()).unwrap();
+        let btc_usd_swap = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::usd(), &Asset::btc())
+            .unwrap()
+            .prefer_reversed(true);
+        let eth_btc_swap =
+            Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
+        let mut p = Positions::default();
+        p += (Decimal::from(-16000), &usdt);
+        p += (Decimal::from(1), &btc);
+        p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        p += (
+            Decimal::from(16001),
+            Decimal::from(-1.5),
+            Decimal::from(-2.7),
+            &btc_usdt_swap,
+        );
+        let expr = p.as_expr();
+        #[cfg(feature = "std")]
+        println!("{}", *expr);
+        let prices = HashMap::from([
+            (eth_btc_swap.clone(), Decimal::from(0.059)),
+            (
+                btc_usd_swap.clone(),
+                Decimal::from(1) / Decimal::from(17000),
+            ),
+            (btc_usdt_swap.clone(), Decimal::from(17002)),
+            (
+                Instrument::from((btc.clone(), usdt.clone())),
+                Decimal::from(17000),
+            ),
+        ]);
+        #[cfg(feature = "std")]
+        for inst in expr.references(&Asset::USDT) {
+            println!("{inst}");
+        }
+        let ans = expr
+            .eval_with(&Asset::USDT, |p| {
+                let price = prices.get(p.instrument())?;
+                Some(p.closed(price))
+            })
+            .unwrap()
+            .set_precision(1);
         #[cfg(feature = "std")]
         println!("{ans}");
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
