@@ -20,7 +20,7 @@ A position (finance) definition with some good algebraic properties.
 
 ## Getting Started
 
-1. Firstly, add `positions` as a dependency of your project.
+1. Add `positions` as a dependency of your project.
 
 ```toml
 [dependencies]
@@ -32,7 +32,7 @@ rust_decimal = "1.26.1"
 rust_decimal_macros = "1.26.1"
 ```
 
-2. Then, let's calculate some positions:
+2. And now you can calculate your positions!
 
 ```rust
 use positions::prelude::*;
@@ -72,19 +72,20 @@ fn main() {
 ```
 
 ## Usage
-### Basic positions calculation under the "exchange" rule.
+### Basic positions calculation under the "exchange rule".
 ```rust
 use positions::prelude::*;
 use rust_decimal_macros::dec;
 
 fn main() {
-    // Firstly, we open a position of 1.5 BTC at 16000 USDT/BTC.
+    // First, we open a position of 1.5 BTC at 16000 USDT/BTC.
     let inst = Instrument::spot(&Asset::BTC, &Asset::USDT);
     let mut p = inst.position((dec!(16000), dec!(1.5)));
 
     // Later, we add 1.5 BTC to the position at 15000 USDT/BTC.
     p += (dec!(15000), dec!(1.5));
-    // The total position now should be holding 3.0 BTC at the cost of 1550 USDT/BTC.
+    // The total position now should be holding 3.0 BTC at the
+    // cost of 1550 USDT/BTC.
     assert_eq!(p, inst.position((dec!(15500), dec!(3.0))));
 
     // Finally, we close all the position at 15700 USDT/BTC,
@@ -115,26 +116,31 @@ use positions::prelude::*;
 use rust_decimal_macros::dec;
 
 fn main() {
-    // Let's first define the "coin-margin" instrument.
+    // Let's start with declaring a "coin-margin" instrument.
     // `BTC-USD-SWAP` is a "coin-margin" instrument, whose base asset is `USD`.
     let inst = Instrument::try_new("SWAP:BTC-USD-SWAP", &Asset::USD, &Asset::BTC)
         .unwrap()
         .prefer_reversed(true);
-    // We use the `Instrument::prefer_reversed` method to mark an instrument as a reversed instrument,
-    // whose price unit and the position side that shown by the exchange (and `positions`) are actually reversed.
+    // We use the `Instrument::prefer_reversed` method to mark an instrument as
+    // a reversed instrument, whose price unit and the position side that shown
+    // by the exchange (and `positions`) are actually reversed.
     //
-    // Take `BTC-USD-SWAP` as an example, what it actually means that we are holding a $100 "long" position
-    // of `BTC-USD-SWAP` contract at the "price" of 16000 USD/BTC is we short $100 at the price of (1/16000) BTC/USD.
-    // That is what the exchange actually using in its formula when it calculates your total position as well as your profit.
+    // Take `BTC-USD-SWAP` as an example, what it actually means that we are
+    // holding a $100 "long" position of `BTC-USD-SWAP` contract at the "price"
+    // of 16000 USD/BTC is we short $100 at the price of (1/16000) BTC/USD.
+    // That is what the exchange actually using in its formula when it calculates
+    // your total position as well as your profit.
 
     // We can represent this case directly by using `Reversed`:
     let mut p = inst.position(Reversed((dec!(16000), dec!(100))));
 
-    // If we print it, we will see the reversed form (which is the same as what you see in the exchange) of the position.
-    // That is because we have marked the `inst` to be "reversed-preferring".
+    // If we print it, we will see the reversed form (which is the same as what
+    // you see in the exchange) of the position. That is because we have marked
+    // the `inst` to be "reversed-preferring".
     assert_eq!(p.to_string(), "(16000, 100 USD)*");
 
-    // The return value of `Position::price` and `Position::size` methods also respect this setting.
+    // The return value of `Position::price` and `Position::size` methods also
+    // respect this setting.
     assert_eq!(p.price().unwrap(), dec!(16000));
     assert_eq!(p.size(), dec!(100));
 
@@ -145,12 +151,14 @@ fn main() {
     // Let's add another reversed position to it to see what will happen.
     p += Reversed((dec!(15000), dec!(100)));
     assert_eq!(p.to_string(), "(15483.870967741935483870951759, 200 USD)*");
-    // It is not the same result when we are calculating with the "true form", but this is the right answer.
+    // It is not the same result when we are calculating with the "true form",
+    // but this is the right answer.
 
     // See what we will get when we close this position.
     p += Reversed((dec!(15700), -dec!(200)));
     assert_eq!(p.take(), dec!(0.0001778131634819532908705000));
     assert!(p.is_zero());
-    // That may seem like a small profit, but the unit is BTC, which is actually not small.
+    // That may seem like a small profit, but the unit is BTC, which is actually
+    // not small.
 }
 ```

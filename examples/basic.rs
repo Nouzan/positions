@@ -2,7 +2,7 @@ use positions::prelude::*;
 use rust_decimal_macros::dec;
 
 fn main() {
-    // Firstly, we open a position of 1.5 BTC at 16000 USDT/BTC.
+    // First, we open a position of 1.5 BTC at 16000 USDT/BTC.
     let inst = Instrument::spot(&Asset::BTC, &Asset::USDT);
     let mut p = inst.position((dec!(16000), dec!(1.5)));
 
