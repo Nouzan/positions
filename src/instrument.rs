@@ -8,16 +8,13 @@ use crate::{
 use alloc::fmt;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    format,
-    string::{String, ToString},
-};
+use alloc::string::{String, ToString};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Instrument.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Instrument {
     prefer_reversed: bool,
@@ -29,11 +26,7 @@ pub struct Instrument {
 /// Symbol.
 #[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "Str", into = "String"))]
-pub struct Symbol {
-    prefix: Str,
-    symbol: Str,
-}
+pub struct Symbol(Repr);
 
 impl Symbol {
     /// Empty str, the prefix of spot instruments.
@@ -42,55 +35,109 @@ impl Symbol {
     /// The delimiter of prefix and symbol.
     pub const SEP: char = ':';
 
-    /// Get prefix.
-    /// The prefix of spot instrument must be empty.
-    pub fn prefix(&self) -> &str {
-        self.prefix.as_str()
+    /// Is a derivative.
+    pub fn is_derivative(&self) -> bool {
+        matches!(self.0, Repr::Derivative(_, _))
     }
 
-    /// Is spot.
+    /// Get the prefix and the symbol of the derivative.
+    /// Return [`None`] if it is not a derivative.
+    #[inline]
+    pub fn as_derivative(&self) -> Option<(&str, &str)> {
+        let Repr::Derivative(prefix, symbol) = &self.0 else {
+            return None;
+        };
+        Some((prefix.as_str(), symbol.as_str()))
+    }
+
+    /// Get the prefix of the symbol.
+    /// Spots has no prefix.
+    #[inline]
+    pub fn prefix(&self) -> Option<&str> {
+        Some(self.as_derivative()?.0)
+    }
+
+    /// Get the symbol.
+    /// Return [`None`] if it is not a derivative.
+    #[inline]
+    pub fn symbol(&self) -> Option<&str> {
+        Some(self.as_derivative()?.1)
+    }
+
+    /// Is a spot.
+    #[inline]
     pub fn is_spot(&self) -> bool {
-        self.prefix.is_empty()
+        matches!(self.0, Repr::Spot(_, _))
     }
 
-    /// Get symbol.
-    /// The symbol of spot instrument must be of this format: `"{base}-{quote}"`,
-    /// where `base` and `quote` are in upppercase. For example, `"BTC-USDT"` is a
-    /// valid spot symbol.
-    pub fn symbol(&self) -> &str {
-        self.symbol.as_str()
+    /// As a pair of assets.
+    /// Return [`None`] if it is not a spot.
+    #[inline]
+    pub fn as_spot(&self) -> Option<(&Asset, &Asset)> {
+        let Repr::Spot(base, quote) = &self.0 else {
+            return None;
+        };
+        Some((base, quote))
     }
 
-    /// Create a symbol for the spot.
+    /// Create a spot symbol.
     pub fn spot(base: &Asset, quote: &Asset) -> Self {
-        Self {
-            prefix: Self::SPOT_PREFIX,
-            symbol: Str::new(format!("{base}{}{quote}", Asset::SEP)),
-        }
+        Self(Repr::spot(base, quote))
     }
 
-    /// Create a new symbol from [`Str`].
-    /// Return `None` if `prefix` is emtpy or contains [`Symbol::SEP`];
-    pub fn from_raw(prefix: &Str, symbol: &Str) -> Option<Self> {
-        if prefix.is_empty() || prefix.contains(Self::SEP) {
-            return None;
-        }
-        Some(Self {
-            prefix: prefix.clone(),
-            symbol: symbol.clone(),
-        })
+    /// Get the reversed spot.
+    /// Return [`None`] if it is not a spot.
+    pub fn to_reversed_symbol(&self) -> Option<Self> {
+        let (base, quote) = self.as_spot()?;
+        Some(Self::spot(quote, base))
     }
 
-    /// Create a new symbol from text.
-    /// Return `None` if `prefix` is emtpy or contains [`Symbol::SEP`];
-    pub fn new(prefix: &str, symbol: &str) -> Option<Self> {
-        if prefix.is_empty() || prefix.contains(Self::SEP) {
-            return None;
+    /// Create a derivative symbol.
+    /// Return [`ParseSymbolError`] if the prefix is not valid.
+    pub fn derivative(prefix: &str, symbol: &str) -> Result<Self, ParseSymbolError> {
+        Ok(Self(Repr::derivative(prefix, symbol)?))
+    }
+}
+
+/// The internal representation of a symbol.
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "Str", into = "String"))]
+enum Repr {
+    /// Spot.
+    Spot(Asset, Asset),
+    /// Derivative
+    Derivative(Str, Str),
+}
+
+impl Repr {
+    #[inline]
+    fn spot(base: &Asset, quote: &Asset) -> Self {
+        Self::Spot(base.clone(), quote.clone())
+    }
+
+    #[inline]
+    fn derivative(prefix: &str, symbol: &str) -> Result<Self, ParseSymbolError> {
+        if prefix.contains(Symbol::SEP) {
+            Err(ParseSymbolError::InvalidPrefix)
+        } else {
+            Ok(Self::Derivative(Str::new(prefix), Str::new(symbol)))
         }
-        Some(Self {
-            prefix: Str::new(prefix),
-            symbol: Str::new(symbol),
-        })
+    }
+}
+
+impl From<Repr> for String {
+    fn from(symbol: Repr) -> Self {
+        symbol.to_string()
+    }
+}
+
+impl fmt::Display for Repr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Spot(base, quote) => write!(f, "{base}{}{quote}", Asset::SEP),
+            Self::Derivative(prefix, symbol) => write!(f, "{prefix}{}{symbol}", Symbol::SEP),
+        }
     }
 }
 
@@ -102,11 +149,7 @@ impl From<Symbol> for String {
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.prefix.is_empty() {
-            write!(f, "{}", self.symbol)
-        } else {
-            write!(f, "{}{}{}", self.prefix, Self::SEP, self.symbol)
-        }
+        write!(f, "{}", self.0)
     }
 }
 
@@ -142,14 +185,12 @@ impl From<ParseAssetError> for ParseSymbolError {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Symbol {
+impl<'a> TryFrom<&'a str> for Repr {
     type Error = ParseSymbolError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        match value.split_once(Self::SEP) {
-            Some((prefix, symbol)) => {
-                Self::new(prefix, symbol).ok_or(ParseSymbolError::InvalidPrefix)
-            }
+        match value.split_once(Symbol::SEP) {
+            Some((prefix, symbol)) => Self::derivative(prefix, symbol),
             None => {
                 if let Some((base, quote)) = value.split_once(Asset::SEP) {
                     let base = Asset::from_str(base)?;
@@ -160,6 +201,22 @@ impl<'a> TryFrom<&'a str> for Symbol {
                 }
             }
         }
+    }
+}
+
+impl TryFrom<Str> for Repr {
+    type Error = ParseSymbolError;
+
+    fn try_from(value: Str) -> Result<Self, Self::Error> {
+        Self::try_from(value.as_str())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Symbol {
+    type Error = ParseSymbolError;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self(Repr::try_from(value)?))
     }
 }
 
@@ -181,15 +238,12 @@ impl FromStr for Symbol {
 
 impl Instrument {
     /// Create a new instrument.
-    pub fn try_new(
-        symbol: impl AsRef<str>,
-        base: &Asset,
-        quote: &Asset,
-    ) -> Result<Self, ParseSymbolError> {
-        Self::try_with_symbol(Symbol::try_from(symbol.as_ref())?, base, quote)
+    /// Return [`ParseSymbolError`] if the format of the `symbol` is not valid.
+    pub fn try_new(symbol: &str, base: &Asset, quote: &Asset) -> Result<Self, ParseSymbolError> {
+        Self::try_with_symbol(Symbol::try_from(symbol)?, base, quote)
     }
 
-    /// Create a new spot instrument.
+    /// Create a new spot.
     pub fn spot(base: &Asset, quote: &Asset) -> Self {
         Self {
             prefer_reversed: false,
@@ -199,15 +253,44 @@ impl Instrument {
         }
     }
 
-    /// Create a new instrument with the given [`Str`] as symbol.
+    /// Create a new derivative.
+    /// Return [`ParseSymbolError`] if the `prefix` is not valid.
+    pub fn derivative(
+        prefix: &str,
+        symbol: &str,
+        base: &Asset,
+        quote: &Asset,
+    ) -> Result<Self, ParseSymbolError> {
+        let symbol = Symbol::derivative(prefix, symbol)?;
+        Ok(Self {
+            prefer_reversed: false,
+            symbol,
+            base: base.clone(),
+            quote: quote.clone(),
+        })
+    }
+
+    /// Convert to the revsered spot.
+    /// Return [`None`] if it is not a spot.
+    pub fn to_reversed_spot(&self) -> Option<Self> {
+        let symbol = self.symbol.to_reversed_symbol()?;
+        Some(Self {
+            prefer_reversed: self.prefer_reversed,
+            symbol,
+            base: self.quote.clone(),
+            quote: self.base.clone(),
+        })
+    }
+
+    /// Create a new instrument with the given symbol.
+    /// Return [`ParseSymbolError`] if the `symbol` does not match the given `base` or `quote`.
     pub fn try_with_symbol(
         symbol: Symbol,
         base: &Asset,
         quote: &Asset,
     ) -> Result<Self, ParseSymbolError> {
-        if symbol.is_spot() {
-            let valid_symbol = Symbol::spot(base, quote);
-            if valid_symbol != symbol {
+        if let Some(pair) = symbol.as_spot() {
+            if pair != (base, quote) {
                 return Err(ParseSymbolError::InvalidSpotFormat);
             }
         }
@@ -230,11 +313,6 @@ impl Instrument {
     /// Default to `false`.
     pub fn is_prefer_reversed(&self) -> bool {
         self.prefer_reversed
-    }
-
-    /// Is this instrument a derivative.
-    pub fn is_derivative(&self) -> bool {
-        !self.symbol.is_spot()
     }
 
     /// Get the symbol.
@@ -333,12 +411,30 @@ mod tests {
     fn symbol_from_str() {
         let swap = Symbol::from_str("SWAP:btcusdt").unwrap();
         assert!(!swap.is_spot());
-        assert_eq!(swap, Symbol::new("SWAP", "btcusdt").unwrap());
+        assert_eq!(swap, Symbol::derivative("SWAP", "btcusdt").unwrap());
         assert_eq!(swap.to_string(), "SWAP:btcusdt");
         let spot = Symbol::from_str("btc-usdt").unwrap();
         assert!(spot.is_spot());
         assert_eq!(spot, Symbol::spot(&Asset::BTC, &Asset::USDT));
         assert_eq!(spot.to_string(), "BTC-USDT");
+    }
+
+    #[test]
+    fn reversed_spot_symbol() {
+        let spot: Symbol = "BTC-USDT".parse().unwrap();
+        assert_eq!(
+            spot.to_reversed_symbol(),
+            Some(Symbol::spot(&Asset::USDT, &Asset::BTC))
+        );
+    }
+
+    #[test]
+    fn reversed_spot() {
+        let spot = Instrument::spot(&Asset::BTC, &Asset::USDT);
+        assert_eq!(
+            spot.to_reversed_spot(),
+            Some(Instrument::spot(&Asset::USDT, &Asset::BTC))
+        );
     }
 
     #[cfg(feature = "serde")]
@@ -351,7 +447,7 @@ mod tests {
         assert_eq!(
             assets,
             [
-                Symbol::new("futures", "BTC-USDT-210101").unwrap(),
+                Symbol::derivative("futures", "BTC-USDT-210101").unwrap(),
                 Symbol::spot(&Asset::USDT, &Asset::BTC)
             ]
         );
