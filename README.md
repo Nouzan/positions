@@ -24,7 +24,7 @@ A position (finance) definition with some good algebraic properties.
 
 ```toml
 [dependencies]
-positions = "0.2.0"
+positions = "0.2.1"
 
 # `rust_decimal` is added to make the example code work,
 # but optional for using `positions`.
