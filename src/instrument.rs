@@ -1,4 +1,4 @@
-use core::{borrow::Borrow, hash::Hash, ops::Deref, str::FromStr};
+use core::{borrow::Borrow, hash::Hash, str::FromStr};
 
 use crate::{
     asset::{Asset, ParseAssetError},
@@ -21,6 +21,177 @@ pub struct Instrument {
     symbol: Symbol,
     base: Asset,
     quote: Asset,
+}
+
+impl Instrument {
+    /// Create a new instrument.
+    /// Return [`ParseSymbolError`] if the format of the `symbol` is not valid.
+    pub fn try_new(symbol: &str, base: &Asset, quote: &Asset) -> Result<Self, ParseSymbolError> {
+        Self::try_with_symbol(Symbol::try_from(symbol)?, base, quote)
+    }
+
+    /// Create a new spot.
+    pub fn spot(base: &Asset, quote: &Asset) -> Self {
+        Self {
+            prefer_reversed: false,
+            symbol: Symbol::spot(base, quote),
+            base: base.clone(),
+            quote: quote.clone(),
+        }
+    }
+
+    /// Create a new derivative.
+    /// Return [`ParseSymbolError`] if the `prefix` is not valid.
+    pub fn derivative(
+        prefix: &str,
+        symbol: &str,
+        base: &Asset,
+        quote: &Asset,
+    ) -> Result<Self, ParseSymbolError> {
+        let symbol = Symbol::derivative(prefix, symbol)?;
+        Ok(Self {
+            prefer_reversed: false,
+            symbol,
+            base: base.clone(),
+            quote: quote.clone(),
+        })
+    }
+
+    /// Convert to the revsered spot.
+    /// Return [`None`] if it is not a spot.
+    pub fn to_reversed_spot(&self) -> Option<Self> {
+        let symbol = self.symbol.to_reversed_symbol()?;
+        Some(Self {
+            prefer_reversed: self.prefer_reversed,
+            symbol,
+            base: self.quote.clone(),
+            quote: self.base.clone(),
+        })
+    }
+
+    /// Create a new instrument with the given symbol.
+    /// Return [`ParseSymbolError`] if the `symbol` does not match the given `base` or `quote`.
+    pub fn try_with_symbol(
+        symbol: Symbol,
+        base: &Asset,
+        quote: &Asset,
+    ) -> Result<Self, ParseSymbolError> {
+        if let Some(pair) = symbol.as_spot() {
+            if pair != (base, quote) {
+                return Err(ParseSymbolError::InvalidSpotFormat);
+            }
+        }
+        Ok(Self {
+            prefer_reversed: false,
+            symbol,
+            base: base.clone(),
+            quote: quote.clone(),
+        })
+    }
+
+    /// Whether to mark this instrument as a reversed-prefering.
+    /// Default to `false`.
+    pub fn prefer_reversed(mut self, reversed: bool) -> Self {
+        self.prefer_reversed = reversed;
+        self
+    }
+
+    /// Is this instrument reversed-prefering.
+    /// Default to `false`.
+    pub fn is_prefer_reversed(&self) -> bool {
+        self.prefer_reversed
+    }
+
+    /// Get the symbol.
+    #[inline]
+    pub fn as_symbol(&self) -> &Symbol {
+        &self.symbol
+    }
+
+    /// Is spot.
+    #[inline]
+    pub fn is_spot(&self) -> bool {
+        self.symbol.is_spot()
+    }
+
+    /// Is derivative.
+    #[inline]
+    pub fn is_derivative(&self) -> bool {
+        self.symbol.is_derivative()
+    }
+
+    /// Get the base asset.
+    pub fn base(&self) -> &Asset {
+        &self.base
+    }
+
+    /// Get the quote asset.
+    pub fn quote(&self) -> &Asset {
+        &self.quote
+    }
+
+    /// Create a [`Position`] with the given position of this instrument.
+    #[inline]
+    pub fn position<T, P>(&self, position: P) -> Position<T>
+    where
+        T: PositionNum,
+        P: IntoNaivePosition<T>,
+    {
+        Position::new(self.clone(), position)
+    }
+}
+
+impl From<(Asset, Asset)> for Instrument {
+    fn from((base, quote): (Asset, Asset)) -> Self {
+        Self::spot(&base, &quote)
+    }
+}
+
+impl fmt::Display for Instrument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.symbol)
+    }
+}
+
+impl PartialEq for Instrument {
+    fn eq(&self, other: &Self) -> bool {
+        self.prefer_reversed == other.prefer_reversed
+            && self.symbol == other.symbol
+            && self.base == other.base
+            && self.quote == other.quote
+    }
+}
+
+impl Eq for Instrument {}
+
+impl Hash for Instrument {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.symbol.hash(state);
+    }
+}
+
+impl PartialEq<Symbol> for Instrument {
+    fn eq(&self, other: &Symbol) -> bool {
+        self.symbol.eq(other)
+    }
+}
+
+impl Borrow<Symbol> for Instrument {
+    fn borrow(&self) -> &Symbol {
+        &self.symbol
+    }
+}
+
+impl<'a> Borrow<Symbol> for &'a Instrument {
+    fn borrow(&self) -> &Symbol {
+        &self.symbol
+    }
+}
+
+impl AsRef<Symbol> for Instrument {
+    fn as_ref(&self) -> &Symbol {
+        &self.symbol
+    }
 }
 
 /// Symbol.
@@ -50,17 +221,17 @@ impl Symbol {
         Some((prefix.as_str(), symbol.as_str()))
     }
 
-    /// Get the prefix of the symbol.
+    /// Get the prefix of the derivative.
     /// Spots has no prefix.
     #[inline]
-    pub fn prefix(&self) -> Option<&str> {
+    pub fn derivative_prefix(&self) -> Option<&str> {
         Some(self.as_derivative()?.0)
     }
 
-    /// Get the symbol.
+    /// Get the symbol of the derivative.
     /// Return [`None`] if it is not a derivative.
     #[inline]
-    pub fn symbol(&self) -> Option<&str> {
+    pub fn derivative_symbol(&self) -> Option<&str> {
         Some(self.as_derivative()?.1)
     }
 
@@ -233,173 +404,6 @@ impl FromStr for Symbol {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::try_from(s)
-    }
-}
-
-impl Instrument {
-    /// Create a new instrument.
-    /// Return [`ParseSymbolError`] if the format of the `symbol` is not valid.
-    pub fn try_new(symbol: &str, base: &Asset, quote: &Asset) -> Result<Self, ParseSymbolError> {
-        Self::try_with_symbol(Symbol::try_from(symbol)?, base, quote)
-    }
-
-    /// Create a new spot.
-    pub fn spot(base: &Asset, quote: &Asset) -> Self {
-        Self {
-            prefer_reversed: false,
-            symbol: Symbol::spot(base, quote),
-            base: base.clone(),
-            quote: quote.clone(),
-        }
-    }
-
-    /// Create a new derivative.
-    /// Return [`ParseSymbolError`] if the `prefix` is not valid.
-    pub fn derivative(
-        prefix: &str,
-        symbol: &str,
-        base: &Asset,
-        quote: &Asset,
-    ) -> Result<Self, ParseSymbolError> {
-        let symbol = Symbol::derivative(prefix, symbol)?;
-        Ok(Self {
-            prefer_reversed: false,
-            symbol,
-            base: base.clone(),
-            quote: quote.clone(),
-        })
-    }
-
-    /// Convert to the revsered spot.
-    /// Return [`None`] if it is not a spot.
-    pub fn to_reversed_spot(&self) -> Option<Self> {
-        let symbol = self.symbol.to_reversed_symbol()?;
-        Some(Self {
-            prefer_reversed: self.prefer_reversed,
-            symbol,
-            base: self.quote.clone(),
-            quote: self.base.clone(),
-        })
-    }
-
-    /// Create a new instrument with the given symbol.
-    /// Return [`ParseSymbolError`] if the `symbol` does not match the given `base` or `quote`.
-    pub fn try_with_symbol(
-        symbol: Symbol,
-        base: &Asset,
-        quote: &Asset,
-    ) -> Result<Self, ParseSymbolError> {
-        if let Some(pair) = symbol.as_spot() {
-            if pair != (base, quote) {
-                return Err(ParseSymbolError::InvalidSpotFormat);
-            }
-        }
-        Ok(Self {
-            prefer_reversed: false,
-            symbol,
-            base: base.clone(),
-            quote: quote.clone(),
-        })
-    }
-
-    /// Whether to mark this instrument as a reversed-prefering.
-    /// Default to `false`.
-    pub fn prefer_reversed(mut self, reversed: bool) -> Self {
-        self.prefer_reversed = reversed;
-        self
-    }
-
-    /// Is this instrument reversed-prefering.
-    /// Default to `false`.
-    pub fn is_prefer_reversed(&self) -> bool {
-        self.prefer_reversed
-    }
-
-    /// Get the symbol.
-    #[inline]
-    pub fn as_symbol(&self) -> &Symbol {
-        &self.symbol
-    }
-
-    /// Get the base asset.
-    pub fn base(&self) -> &Asset {
-        &self.base
-    }
-
-    /// Get the quote asset.
-    pub fn quote(&self) -> &Asset {
-        &self.quote
-    }
-
-    /// Create a [`Position`] with the given position of this instrument.
-    #[inline]
-    pub fn position<T, P>(&self, position: P) -> Position<T>
-    where
-        T: PositionNum,
-        P: IntoNaivePosition<T>,
-    {
-        Position::new(self.clone(), position)
-    }
-}
-
-impl From<(Asset, Asset)> for Instrument {
-    fn from((base, quote): (Asset, Asset)) -> Self {
-        Self::spot(&base, &quote)
-    }
-}
-
-impl fmt::Display for Instrument {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.symbol)
-    }
-}
-
-impl PartialEq for Instrument {
-    fn eq(&self, other: &Self) -> bool {
-        self.prefer_reversed == other.prefer_reversed
-            && self.symbol == other.symbol
-            && self.base == other.base
-            && self.quote == other.quote
-    }
-}
-
-impl Eq for Instrument {}
-
-impl Hash for Instrument {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.symbol.hash(state);
-    }
-}
-
-impl PartialEq<Symbol> for Instrument {
-    fn eq(&self, other: &Symbol) -> bool {
-        self.symbol.eq(other)
-    }
-}
-
-impl Borrow<Symbol> for Instrument {
-    fn borrow(&self) -> &Symbol {
-        &self.symbol
-    }
-}
-
-impl<'a> Borrow<Symbol> for &'a Instrument {
-    fn borrow(&self) -> &Symbol {
-        &self.symbol
-    }
-}
-
-impl Deref for Instrument {
-    type Target = Symbol;
-
-    fn deref(&self) -> &Self::Target {
-        &self.symbol
-    }
-}
-
-impl AsRef<Symbol> for Instrument {
-    fn as_ref(&self) -> &Symbol {
-        &self.symbol
     }
 }
 
