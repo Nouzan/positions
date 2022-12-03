@@ -4,7 +4,7 @@ use crate::{
     Asset, HashMap, IntoNaivePosition, NaivePosition, PositionNum, Reversed,
 };
 use alloc::fmt;
-use core::ops::{AddAssign, Deref, Neg, SubAssign};
+use core::ops::{Add, AddAssign, Deref, Neg, SubAssign};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -48,9 +48,17 @@ where
     }
 
     /// Return the value when the position is closed at the given price.
+    /// # Warning
+    /// This method will respect the reversed-preference,
+    /// so if you want to close a position of a "reversed instrument",
+    /// you should provide the price with "reversed form".
     pub fn closed(&self, price: &T) -> T {
         let mut p = self.naive.clone();
-        p -= (price.clone(), p.size.clone());
+        if self.instrument.is_prefer_reversed() {
+            p -= Reversed((price.clone(), self.size()));
+        } else {
+            p -= (price.clone(), self.size());
+        }
         p.value
     }
 
@@ -520,6 +528,18 @@ where
     }
 }
 
+impl<T> Add for Positions<T>
+where
+    T: PositionNum,
+{
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
 impl<T> AddAssign<Position<T>> for Positions<T>
 where
     T: PositionNum,
@@ -679,9 +699,16 @@ impl<'a, T: PositionNum> Expr<'a, T> {
         })
     }
 
+    /// Evaluate the expression with the given prices.
+    /// Return [`None`] if there are missing prices.
+    pub fn eval(&self, root: &Asset, prices: &HashMap<Symbol, T>) -> Option<T> {
+        self.eval_with(root, |p| {
+            Some(p.closed(prices.get(p.instrument().as_symbol())?))
+        })
+    }
+
     /// Evaluate the expression with the value returned by the given function.
     /// Return [`None`] if there is something wrong.
-    #[allow(clippy::type_complexity)]
     pub fn eval_with<F>(&self, root: &Asset, mut eval: F) -> Option<T>
     where
         F: FnMut(&Position<T>) -> Option<T>,
@@ -839,10 +866,7 @@ mod tests {
         println!("{tree}");
         let prices = HashMap::from([
             (eth_btc_swap.clone(), Decimal::from(0.059)),
-            (
-                btc_usd_swap.clone(),
-                Decimal::from(1) / Decimal::from(17000),
-            ),
+            (btc_usd_swap.clone(), Decimal::from(17000)),
             (btc_usdt_swap.clone(), Decimal::from(17002)),
             (
                 Instrument::from((btc.clone(), usdt.clone())),
@@ -899,7 +923,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "std")]
     #[test]
     fn eval_expr() {
         let btc = Asset::btc();
@@ -912,14 +935,19 @@ mod tests {
         let eth_btc_swap =
             Instrument::try_new("SWAP:ETH-BTC-SWAP", &Asset::eth(), &Asset::btc()).unwrap();
         let mut p = Positions::default();
+        #[cfg(feature = "std")]
         println!("{}", p.as_expr());
         p += (Decimal::from(-16000), &usdt);
+        #[cfg(feature = "std")]
         println!("{}", p.as_expr());
         p += (Decimal::from(1), &btc);
+        #[cfg(feature = "std")]
         println!("{}", p.as_expr());
         p += Reversed((Decimal::from(16000), Decimal::from(-16000), &btc_usd_swap));
+        #[cfg(feature = "std")]
         println!("{}", p.as_expr());
         p += (Decimal::from(0.067), Decimal::from(-21.5), &eth_btc_swap);
+        #[cfg(feature = "std")]
         println!("{}", p.as_expr());
         p += (
             Decimal::from(16001),
@@ -928,29 +956,20 @@ mod tests {
             &btc_usdt_swap,
         );
         let expr = p.as_expr();
+        #[cfg(feature = "std")]
         println!("{}", expr);
         let prices = HashMap::from([
-            (eth_btc_swap.clone(), Decimal::from(0.059)),
-            (
-                btc_usd_swap.clone(),
-                Decimal::from(1) / Decimal::from(17000),
-            ),
-            (btc_usdt_swap.clone(), Decimal::from(17002)),
-            (
-                Instrument::from((btc.clone(), usdt.clone())),
-                Decimal::from(17000),
-            ),
+            (eth_btc_swap.as_symbol().clone(), Decimal::from(0.059)),
+            (btc_usd_swap.as_symbol().clone(), Decimal::from(17000)),
+            (btc_usdt_swap.as_symbol().clone(), Decimal::from(17002)),
+            (Symbol::spot(&btc, &usdt), Decimal::from(17000)),
         ]);
+        #[cfg(feature = "std")]
         for inst in expr.instruments(&Asset::USDT) {
             println!("{inst}");
         }
-        let ans = expr
-            .eval_with(&Asset::USDT, |p| {
-                let price = prices.get(p.instrument())?;
-                Some(p.closed(price))
-            })
-            .unwrap()
-            .set_precision(1);
+        let ans = expr.eval(&Asset::USDT, &prices).unwrap().set_precision(1);
+        #[cfg(feature = "std")]
         println!("{ans}");
         assert_eq!(ans, Decimal::from(1419.8).set_precision(1));
     }
