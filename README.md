@@ -110,7 +110,7 @@ fn main() {
     assert!(p.is_zero());
 }
 ```
-### Calculate the "coin-margin" contracts with `Reversed`
+### Calculating the "coin-margin" contracts with `Reversed`
 ```rust
 use positions::prelude::*;
 use rust_decimal_macros::dec;
@@ -162,7 +162,7 @@ fn main() {
     // not small.
 }
 ```
-### Calculate the multi-instruments positions with `Positions`
+### Calculating the multi-instruments positions with `Positions`
 ```rust
 use maplit::hashmap;
 use positions::prelude::*;
